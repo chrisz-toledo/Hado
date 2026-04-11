@@ -10,9 +10,9 @@ busca subdomains de "target.com" -> filtra alive -> escanea ports [80, 443] -> g
 
 ## What is Habla?
 
-Habla is a domain-specific language for cybersecurity that transpiles to Python, C, and Rust. It is designed so that LLMs (Claude, GPT, Gemini) can write cybersecurity code more efficiently, more cheaply, and with fewer errors. The user writes 12 tokens in Habla — the transpiler generates 45+ tokens of executable code.
+Habla is a domain-specific language for cybersecurity that transpiles to **Python, Go, C, and Rust**. It is designed so that LLMs (Claude, GPT, Gemini) can write cybersecurity code more efficiently, more cheaply, and with fewer errors. The user writes 12 tokens in Habla — the transpiler generates 45+ tokens of executable code.
 
-Habla is not a general-purpose language competing with Python. It mounts on top of the existing Python ecosystem (nmap, scapy, requests, subprocess) and extends it with a syntax that matches how security practitioners actually think and talk.
+Habla is not a general-purpose language competing with Python. It is a **multi-target DSL**: the same Habla code compiles to Python for rapid prototyping, Go for concurrent scanners, Rust for memory-safe tools, and C for exploits and kernel-level work.
 
 ---
 
@@ -111,12 +111,14 @@ busca subdomains de "example.com"
 captura packets en interface "eth0"
 ```
 
-### 7. Three compilation targets
+### 7. Four compilation targets
 ```bash
-habla compile script.habla              # Python (default)
-habla compile --target c script.habla   # C (gcc/clang)
+habla compile script.habla               # Python (default)
+habla compile --target go script.habla   # Go  (go build)
+habla compile --target c script.habla    # C   (gcc/clang)
 habla compile --target rust script.habla # Rust (rustc/cargo)
-habla run script.habla                  # Execute via Python
+habla run script.habla                   # Execute via Python
+habla targets                            # List all backends and their status
 ```
 
 ---
@@ -197,7 +199,7 @@ String literals are **never** normalized — `muestra "Año nuevo"` preserves th
 Use this system prompt to enable Habla generation in your AI application:
 
 ```
-You are an expert in Habla, a cybersecurity DSL that transpiles to Python, C, and Rust.
+You are an expert in Habla, a cybersecurity DSL that transpiles to Python, Go, C, and Rust.
 
 Rules for generating Habla code:
 - Use Spanish verbs for actions: muestra, filtra, escanea, busca, captura, ataca, analiza, genera
@@ -236,16 +238,16 @@ See [docs/llm-guide.md](docs/llm-guide.md) for the complete guide including all 
 │   Parser    │  recursive descent → AST
 └──────┬──────┘
        │
-       ├──────────────────┬──────────────────┐
-       ▼                  ▼                  ▼
-┌────────────┐   ┌──────────────┐   ┌─────────────┐
-│  Python    │   │      C       │   │    Rust     │
-│ Transpiler │   │  Transpiler  │   │ Transpiler  │
-└─────┬──────┘   └──────┬───────┘   └──────┬──────┘
-      │                 │                  │
-      ▼                 ▼                  ▼
-   .py file          .c file            .rs file
-   (exec'd)       (gcc/clang)        (rustc/cargo)
+       ├──────────────┬──────────────┬──────────────┐
+       ▼              ▼              ▼              ▼
+┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐
+│  Python   │  │    Go     │  │     C     │  │   Rust    │
+│  Backend  │  │  Backend  │  │  Backend  │  │  Backend  │
+└─────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘
+      │               │              │               │
+      ▼               ▼              ▼               ▼
+   .py file        .go file       .c file        .rs file
+   (exec'd)      (go build)    (gcc/clang)   (rustc/cargo)
 ```
 
 ---
@@ -255,29 +257,47 @@ See [docs/llm-guide.md](docs/llm-guide.md) for the complete guide including all 
 ### Phase 1 — Prototype (v0.1) ← Current
 - [x] Lexer + Parser + Transpiler
 - [x] Variables, conditionals, loops, functions, pipes
-- [x] Three backends: Python, C, Rust
+- [x] Four backends: Python, Go (stub), C, Rust (stub)
 - [x] Cybersec modules: scanner, recon, capture, attack, analysis, report
 - [x] CLI: run, compile --target, repl
 - [x] 7 example programs
 
-### Phase 2 — Expansion (v0.2)
-- [ ] All cybersec modules fully functional
+### Phase 2 — Python Expansion (v0.2)
+- [ ] All cybersec modules fully functional in Python
 - [ ] Standard library (red, archivo, texto, crypto)
 - [ ] Better error reporting with suggestions
 - [ ] Plugin system for extending the language
 
-### Phase 3 — Intelligence (v0.3)
-- [ ] Auto-resolve pip dependencies
+### Phase 3 — Go Backend (v0.3)
+- [ ] Go backend fully functional
+- [ ] Native integration: subfinder, nuclei, httpx, naabu
+- [ ] Standalone binary generation (no runtime dependency)
+- [ ] Automatic goroutines for parallel operations
+
+### Phase 4 — Rust Backend (v0.4)
+- [ ] Rust backend fully functional
+- [ ] Integration with rustscan, feroxbuster, cargo-audit
+- [ ] Memory-safe binary generation
+- [ ] Fuzzer and protocol parser support via cargo-fuzz
+
+### Phase 5 — C Backend (v0.5)
+- [ ] C backend fully functional
+- [ ] Integration with libpcap, OpenSSL, raw sockets
+- [ ] Shellcode and exploit generation
+- [ ] Kernel module and driver templates
+
+### Phase 6 — Intelligence (v0.6)
+- [ ] Auto-resolve dependencies per target (pip, go mod, cargo, make)
 - [ ] Detection of insecure patterns in code
-- [ ] Improved REPL with autocompletion
+- [ ] Automatic target recommendation based on use case
 - [ ] Integration with cybersec APIs (Shodan, VirusTotal, etc.)
 
-### Phase 4 — Ecosystem (v1.0)
-- [ ] Package manager
+### Phase 7 — Ecosystem (v1.0)
+- [ ] Multi-target package manager
 - [ ] LSP (Language Server Protocol) for editors
-- [ ] VS Code extension
+- [ ] VS Code extension with syntax highlighting
 - [ ] Interactive web playground
-- [ ] Complete documentation with search
+- [ ] Support for additional targets (Zig, Nim, Assembly)
 
 ---
 
