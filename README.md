@@ -3,8 +3,34 @@
 **A cybersecurity DSL designed for AI-native code generation. Spanish verbs. English nouns. Zero boilerplate.**
 
 ```habla
-busca subdomains de "target.com" -> filtra alive -> escanea ports [80, 443] -> genera reporte
+# 3 lines. No imports. Real output.
+scan    = escanea target en ports [80, 443, 22, 3306]
+headers = analiza headers de target
+genera report con scan, headers
 ```
+
+> **Status: v0.2 — Python backend fully functional. Verified on production targets.**  
+> 117 tests passing · Go/Rust/C backends in development · [Roadmap](docs/roadmap.md)
+
+---
+
+## Proof: This Works in Production
+
+On 2026-04-12, the script above was run against a real production server. Output:
+
+```
+[1/3] Escaneando puertos...
+{'target': '[redacted]', 'open_ports': [21, 22, 80, 443, 3306], 'method': 'nmap'}
+
+[2/3] Analizando headers de seguridad HTTP...
+{'grade': 'F', 'security_score': 0, 'missing_headers': [9 headers]}
+
+[3/3] Generando reporte...
+```
+
+3 lines of Habla. Zero `import` statements written. Real nmap scan. Real HTTP header analysis. Real JSON report.
+
+→ [Full evidence and findings](docs/evidence/v0.2-proof-of-concept.md)
 
 ---
 
@@ -13,6 +39,15 @@ busca subdomains de "target.com" -> filtra alive -> escanea ports [80, 443] -> g
 Habla is a domain-specific language for cybersecurity that transpiles to **Python, Go, C, and Rust**. It is designed so that LLMs (Claude, GPT, Gemini) can write cybersecurity code more efficiently, more cheaply, and with fewer errors. The user writes 12 tokens in Habla — the transpiler generates 45+ tokens of executable code.
 
 Habla is not a general-purpose language competing with Python. It is a **multi-target DSL**: the same Habla code compiles to Python for rapid prototyping, Go for concurrent scanners, Rust for memory-safe tools, and C for exploits and kernel-level work.
+
+### Backend Status
+
+| Target | Status | Use Case |
+|--------|--------|----------|
+| Python | ✅ **Functional** | Scripting, OSINT, rapid prototyping |
+| Go | 🔄 Stub → v0.4 | Concurrent scanners, standalone binaries |
+| Rust | 🔄 Stub → v0.5 | Memory-safe tools, fuzzing, parsers |
+| C | 🔄 Stub → v0.6 | Exploits, kernel modules, libpcap |
 
 ---
 
