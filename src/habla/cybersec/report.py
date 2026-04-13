@@ -127,3 +127,52 @@ def _render_text(data: Any, title: str, author: str, timestamp: str) -> str:
         "Generado con Habla DSL",
     ]
     return "\n".join(lines)
+
+
+def consolidate(*datasets, output_file: Optional[str] = None, title: str = "Reporte Consolidado") -> str:
+    """
+    Consolida multiples estructuras de datos en un unico reporte JSON.
+
+    Acepta dicts, listas, strings — cualquier resultado de operaciones cyber.
+    Util para combinar resultados de scan + recon + analisis en un solo output.
+
+    Args:
+        *datasets: cualquier numero de resultados a consolidar
+        output_file: path opcional para guardar el JSON
+        title: titulo del reporte consolidado
+
+    Returns:
+        String JSON con todos los datasets indexados
+    """
+    timestamp = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+    consolidated = {
+        "title": title,
+        "timestamp": timestamp,
+        "generator": "Habla DSL",
+        "datasets": [],
+    }
+
+    for i, ds in enumerate(datasets, 1):
+        entry: dict = {"index": i}
+        if isinstance(ds, dict):
+            entry["type"] = "scan_result" if "open_ports" in ds else "dict"
+            entry["data"] = ds
+        elif isinstance(ds, list):
+            entry["type"] = "list"
+            entry["count"] = len(ds)
+            entry["data"] = ds
+        elif isinstance(ds, str):
+            entry["type"] = "text"
+            entry["data"] = ds
+        else:
+            entry["type"] = type(ds).__name__
+            entry["data"] = str(ds)
+        consolidated["datasets"].append(entry)
+
+    content = json.dumps(consolidated, indent=2, default=str)
+
+    if output_file:
+        with open(output_file, "w", encoding="utf-8") as f:
+            f.write(content)
+
+    return content

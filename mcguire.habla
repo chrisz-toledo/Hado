@@ -1,0 +1,5 @@
+target = "mcguiremanagement.com"
+muestra "Escaneando objetivo:" target
+
+resultados = escanea target
+muestra resultados

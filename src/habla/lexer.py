@@ -79,7 +79,8 @@ class Token:
 
 # Orden importa: PIPE antes de OPERATOR, FLOAT antes de INT, etc.
 _TOKEN_PATTERNS = [
-    ("COMMENT",    r"//[^\n]*"),
+    ("COMMENT",      r"//[^\n]*"),
+    ("HASH_COMMENT", r"#[^\n]*"),
     ("STRING",     r'"""[\s\S]*?"""|'
                    r"'''[\s\S]*?'''|"
                    r'"(?:[^"\\]|\\.)*"|'
@@ -87,6 +88,7 @@ _TOKEN_PATTERNS = [
     ("FLOAT",      r"\d+\.\d+"),
     ("INT",        r"\d+"),
     ("PIPE",       r"->"),
+    ("VERT_PIPE",  r"\|"),
     ("GE",         r">="),
     ("LE",         r"<="),
     ("EQ",         r"=="),
@@ -121,7 +123,7 @@ _MASTER_REGEX = re.compile(
 # Grupos que se mapean a OPERATOR
 _OPERATOR_GROUPS = frozenset({"GE", "LE", "EQ", "NE", "GT", "LT", "PLUS", "MINUS", "STAR", "SLASH", "PERCENT", "ASSIGN"})
 # Grupos que se ignoran
-_SKIP_GROUPS = frozenset({"WHITESPACE", "COMMENT"})
+_SKIP_GROUPS = frozenset({"WHITESPACE", "COMMENT", "HASH_COMMENT"})
 
 
 class Lexer:
@@ -140,7 +142,7 @@ class Lexer:
             stripped = raw_line.lstrip()
 
             # Saltar lineas en blanco y comentarios al medir indentacion
-            if not stripped or stripped.startswith("//"):
+            if not stripped or stripped.startswith("//") or stripped.startswith("#"):
                 tokens.append(Token(TokenType.NEWLINE, "", line_num, 0))
                 continue
 
@@ -207,7 +209,7 @@ class Lexer:
             return TokenType.NUMBER
         if group == "STRING":
             return TokenType.STRING
-        if group == "PIPE":
+        if group in ("PIPE", "VERT_PIPE"):
             return TokenType.PIPE
         if group in _OPERATOR_GROUPS:
             return TokenType.OPERATOR

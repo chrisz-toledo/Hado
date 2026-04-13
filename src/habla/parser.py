@@ -142,27 +142,27 @@ class Parser:
 
         # escanea
         if tok.type == TokenType.KEYWORD and tok.value == "escanea":
-            return self.parse_cyber_scan()
+            return self._maybe_pipe_chain(self.parse_cyber_scan())
 
         # busca
         if tok.type == TokenType.KEYWORD and tok.value == "busca":
-            return self.parse_busca()
+            return self._maybe_pipe_chain(self.parse_busca())
 
         # captura
         if tok.type == TokenType.KEYWORD and tok.value == "captura":
-            return self.parse_capture()
+            return self._maybe_pipe_chain(self.parse_capture())
 
         # ataca
         if tok.type == TokenType.KEYWORD and tok.value == "ataca":
-            return self.parse_attack()
+            return self._maybe_pipe_chain(self.parse_attack())
 
         # genera
         if tok.type == TokenType.KEYWORD and tok.value == "genera":
-            return self.parse_genera()
+            return self._maybe_pipe_chain(self.parse_genera())
 
         # analiza
         if tok.type == TokenType.KEYWORD and tok.value == "analiza":
-            return self.parse_analiza()
+            return self._maybe_pipe_chain(self.parse_analiza())
 
         # Asignacion: IDENT = expr o keyword-como-variable = expr (lookahead)
         # Solo triggerea si el siguiente token es '=' (operador de asignacion, no '==')
@@ -179,6 +179,26 @@ class Parser:
     def _consume_newline(self):
         if self.match(TokenType.NEWLINE):
             self.consume()
+
+    def _maybe_pipe_chain(self, stmt: Node) -> Node:
+        """
+        Si el token actual es PIPE (-> o |), envuelve la expresion del stmt
+        en un PipeExpression con los pasos siguientes.
+        Permite usar | o -> despues de cualquier verbo cyber a nivel de statement.
+        """
+        if not self.match(TokenType.PIPE):
+            return stmt
+        # Extraer la expresion del ExpressionStatement
+        expr = stmt.expr if isinstance(stmt, ExpressionStatement) else stmt
+        line = expr.line
+        steps = [expr]
+        while self.match(TokenType.PIPE):
+            self.consume()
+            step = self.parse_pipe_step()
+            steps.append(step)
+        pipe_expr = PipeExpression(steps=steps, line=line)
+        self._consume_newline()
+        return ExpressionStatement(expr=pipe_expr, line=line)
 
     # ─── Bloques ─────────────────────────────────────────────────────────────
 
@@ -308,8 +328,20 @@ class Parser:
         line = self.current().line
         self.expect(TokenType.KEYWORD, "escanea")
 
-        # escanea target "ip" en ports [22, 80]
-        # Consumir el literal 'target' si lo que sigue es un string (no una variable)
+        # Caso 1: escanea ports de target  →  scan con ports por defecto
+        if self.current().value == "ports" and self.peek().value == "de":
+            self.consume()  # ports
+            self.consume()  # de
+            target = self.parse_primary()
+            default_ports = [
+                NumberLiteral(value=p, line=line)
+                for p in [21, 22, 23, 25, 80, 443, 3306, 5432, 8080, 8443]
+            ]
+            self._consume_newline()
+            node = CyberScan(target=target, ports=default_ports, line=line)
+            return ExpressionStatement(expr=node, line=line)
+
+        # Caso 2: escanea target "ip" en ports [22, 80]
         # escanea target "192.168.1.1" -> consume 'target', luego parsea string
         # escanea mi_var en ports [...]  -> 'mi_var' es la variable directamente
         tok_now = self.current()
@@ -427,13 +459,18 @@ class Parser:
         line = self.current().line
         self.expect(TokenType.KEYWORD, "genera")
 
-        # genera reporte con datos
-        if self.match_value("reporte"):
+        # genera reporte / genera report  (ambos alias aceptados)
+        if self.match_value("reporte") or self.match_value("report"):
             self.consume()
         data = None
         if self.match_value("con"):
             self.consume()
-            data = self.parse_primary()
+            # Recoger argumentos separados por coma: genera reporte con a, b, c
+            args = [self.parse_primary()]
+            while self.match(TokenType.COMMA):
+                self.consume()
+                args.append(self.parse_primary())
+            data = ListLiteral(elements=args, line=line) if len(args) > 1 else args[0]
         self._consume_newline()
         return ExpressionStatement(expr=GenerateReport(data=data, line=line), line=line)
 

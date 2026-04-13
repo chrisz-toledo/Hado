@@ -361,13 +361,16 @@ class PythonTranspiler(BaseTranspiler):
         if isinstance(step, FilterExpression):
             cond = self._visit(step.condition)
             var = step.var
-            return f"{ind}{out_var} = [{var} for {var} in {prev_var} if {cond}]"
+            result = f"[{var} for {var} in {prev_var} if {cond}]"
+            return f"{ind}{out_var} = {result}" if out_var else f"{ind}{result}"
 
         elif isinstance(step, SortExpression):
             if step.key:
                 key_expr = self._visit(step.key)
-                return f"{ind}{out_var} = sorted({prev_var}, key=lambda _x: _x[{key_expr}])"
-            return f"{ind}{out_var} = sorted({prev_var})"
+                result = f"sorted({prev_var}, key=lambda _x: _x[{key_expr}])"
+            else:
+                result = f"sorted({prev_var})"
+            return f"{ind}{out_var} = {result}" if out_var else f"{ind}{result}"
 
         elif isinstance(step, ShowStatement):
             return f"{ind}print({prev_var})"
@@ -377,25 +380,37 @@ class PythonTranspiler(BaseTranspiler):
             return f'{ind}open({fname}, "w").write(str({prev_var}))'
 
         elif isinstance(step, CountExpression):
-            return f"{ind}{out_var} = len({prev_var})"
+            if out_var:
+                return f"{ind}{out_var} = len({prev_var})"
+            return f"{ind}len({prev_var})"
 
         elif isinstance(step, CyberRecon):
             # filtra alive como paso de pipe
             if step.filter_alive:
-                return f"{ind}{out_var} = [s for s in {prev_var} if s]"
+                if out_var:
+                    return f"{ind}{out_var} = [s for s in {prev_var} if s]"
+                return f"{ind}[s for s in {prev_var} if s]"
             self.imports.need_helper("find_subdomains")
             domain = self._visit(step.domain) if step.domain else '""'
-            return f"{ind}{out_var} = _habla_find_subdomains({domain})"
+            if out_var:
+                return f"{ind}{out_var} = _habla_find_subdomains({domain})"
+            return f"{ind}_habla_find_subdomains({domain})"
 
         elif isinstance(step, GenerateReport):
             self.imports.need_helper("report")
-            return f"{ind}{out_var} = _habla_report({prev_var})"
+            # Si out_var es None (ultimo paso sin asignacion), emitir como statement
+            if out_var:
+                return f"{ind}{out_var} = _habla_report({prev_var})"
+            return f"{ind}_habla_report({prev_var})"
 
         elif isinstance(step, FunctionCall):
             args = [prev_var] + [self._visit(a) for a in step.args]
             all_args = ", ".join(args)
-            return f"{ind}{out_var} = {step.func}({all_args})"
+            if out_var:
+                return f"{ind}{out_var} = {step.func}({all_args})"
+            return f"{ind}{step.func}({all_args})"
 
         else:
             # Caso generico
-            return f"{ind}{out_var} = {self._visit(step)}"
+            val = self._visit(step)
+            return f"{ind}{out_var} = {val}" if out_var else f"{ind}{val}"
