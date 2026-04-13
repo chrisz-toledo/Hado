@@ -205,8 +205,12 @@ class PythonTranspiler(BaseTranspiler):
         return f"_habla_attack({service}, {target}, {wordlist}, {username})"
 
     def _visit_CyberAnalyze(self, node: CyberAnalyze) -> str:
-        self.imports.need_helper("analyze")
         source = self._visit(node.source) if node.source else 'None'
+        # Si el modo es headers, usar analyze_headers directamente (A-F grade + lista)
+        if getattr(node, 'mode', 'auto') == 'headers':
+            self.imports.need_helper("analyze_headers")
+            return f"_habla_analyze_headers({source})"
+        self.imports.need_helper("analyze")
         return f"_habla_analyze({source})"
 
     def _visit_CyberFindVulns(self, node: CyberFindVulns) -> str:
