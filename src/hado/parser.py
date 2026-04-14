@@ -1,5 +1,5 @@
 """
-Habla DSL — Parser de descenso recursivo.
+Hado DSL — Parser de descenso recursivo.
 Convierte una secuencia de tokens en un AST.
 """
 
@@ -122,12 +122,22 @@ class Parser:
             self._consume_newline()
             return ReturnStatement(value=val, line=line)
 
-        # muestra
+        # muestra — acepta multiples args separados por coma o espacio:
+        #   muestra "a" + "b"        → print("a" + "b")
+        #   muestra "label:" var     → print("label:", var)
+        #   muestra a, b, c          → print(a, b, c)
         if tok.type == TokenType.KEYWORD and tok.value == "muestra":
             self.consume()
-            val = self.parse_expr()
+            values = []
+            while not self.match(TokenType.NEWLINE, TokenType.EOF, TokenType.DEDENT):
+                if self.match(TokenType.COMMA):
+                    self.consume()
+                    continue
+                values.append(self.parse_binary())  # parse_binary absorbe ops (+,-,*,/,etc.)
             self._consume_newline()
-            return ShowStatement(value=val, line=line)
+            # Backward-compat: si hay un solo valor, también lo ponemos en .value
+            single = values[0] if len(values) == 1 else None
+            return ShowStatement(values=values, value=single, line=line)
 
         # guarda
         if tok.type == TokenType.KEYWORD and tok.value == "guarda":

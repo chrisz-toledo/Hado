@@ -1,6 +1,6 @@
-# Habla Multi-Target — Go, C, and Rust Backend Vision
+# Hado Multi-Target — Go, C, and Rust Backend Vision
 
-Habla transpiles a single `.habla` source file to four different target languages. This document details the vision, current status, and use cases for each non-Python backend.
+Hado transpiles a single `.ho` source file to four different target languages. This document details the vision, current status, and use cases for each non-Python backend.
 
 ---
 
@@ -8,7 +8,7 @@ Habla transpiles a single `.habla` source file to four different target language
 
 ```
                     ┌─────────────────────────────┐
-                    │        source.habla          │
+                    │        source.ho          │
                     └──────────────┬───────────────┘
                                    │
                     ┌──────────────▼───────────────┐
@@ -35,7 +35,7 @@ All four backends inherit from `BaseTranspiler` and implement the visitor patter
 
 | Target | Status | Control flow | Cyber modules | Execution |
 |--------|--------|-------------|---------------|-----------|
-| Python | Functional | Full | Full (7 modules) | `habla run` / `exec()` |
+| Python | Functional | Full | Full (7 modules) | `hado run` / `exec()` |
 | Go | Stub | Full | Stubs (comments) | `go build` |
 | C | Functional | Full | Partial (sockets) | `gcc` |
 | Rust | Stub | Full | Stubs (comments) | `cargo build` |
@@ -52,11 +52,11 @@ Go is the target for concurrent scanners, standalone binaries, and cloud-native 
 
 ### Use cases
 
-**Concurrent port scanner**: Habla's `escanea target en ports [...]` transpiles to a goroutine-based scanner that checks all ports simultaneously instead of sequentially.
+**Concurrent port scanner**: Hado's `escanea target en ports [...]` transpiles to a goroutine-based scanner that checks all ports simultaneously instead of sequentially.
 
-**Standalone recon tool**: A single `habla compile --target go recon.habla -o recon.go && go build -o recon recon.go` produces a binary you can deploy to any server without installing Python or dependencies.
+**Standalone recon tool**: A single `hado compile --target go recon.ho -o recon.go && go build -o recon recon.go` produces a binary you can deploy to any server without installing Python or dependencies.
 
-**Cloud security automation**: Go binaries run natively in containers, Lambda functions, and Kubernetes jobs. A Habla-generated Go scanner can be deployed as a CronJob for continuous monitoring.
+**Cloud security automation**: Go binaries run natively in containers, Lambda functions, and Kubernetes jobs. A Hado-generated Go scanner can be deployed as a CronJob for continuous monitoring.
 
 ### Generated code characteristics
 
@@ -70,7 +70,7 @@ Go is the target for concurrent scanners, standalone binaries, and cloud-native 
 
 ### Target libraries (v0.2+)
 
-| Habla construct | Go library |
+| Hado construct | Go library |
 |----------------|------------|
 | `escanea` | `github.com/Ullaakut/nmap/v3` |
 | `busca subdomains` | `github.com/projectdiscovery/subfinder/v2` |
@@ -97,7 +97,7 @@ C is the target for exploits, shellcode, kernel modules, and embedded/IoT securi
 
 **Exploit development**: Buffer overflows, format string attacks, and ROP chains require precise memory control that only C provides.
 
-**Shellcode generation**: Habla scripts can generate C code that compiles to position-independent shellcode for payload development.
+**Shellcode generation**: Hado scripts can generate C code that compiles to position-independent shellcode for payload development.
 
 **Kernel module research**: Security researchers analyzing kernel vulnerabilities need C for module development and debugging.
 
@@ -110,13 +110,13 @@ C is the target for exploits, shellcode, kernel modules, and embedded/IoT securi
 - Type inference: `double` for floats, `int` for integers, `const char*` for strings
 - Print: `printf()` with format specifiers
 - Booleans: `1`/`0`
-- Helper function `habla_scan_port()` using POSIX sockets (`socket`, `connect`, `setsockopt`)
+- Helper function `hado_scan_port()` using POSIX sockets (`socket`, `connect`, `setsockopt`)
 - Cybersecurity operations use raw socket calls where possible
 
 ### Compilation
 
 ```bash
-habla compile --target c script.habla -o script.c
+hado compile --target c script.ho -o script.c
 gcc -o scanner script.c
 ./scanner
 ```
@@ -161,7 +161,7 @@ Rust is the target for fuzzing, parser development, and memory-safe tools. Rust 
 
 ### Target crates (v0.2+)
 
-| Habla construct | Rust crate |
+| Hado construct | Rust crate |
 |----------------|------------|
 | `desde` | `reqwest` |
 | `escanea` | `tokio` + `std::net::TcpStream` |
@@ -172,7 +172,7 @@ Rust is the target for fuzzing, parser development, and memory-safe tools. Rust 
 ### Compilation
 
 ```bash
-habla compile --target rust script.habla -o src/main.rs
+hado compile --target rust script.ho -o src/main.rs
 cargo build --release
 ./target/release/scanner
 ```
@@ -190,26 +190,26 @@ cargo build --release
 
 The recommended workflow for multi-target development:
 
-1. **Develop in Python**: Write and test your Habla script with `habla run script.habla`. Python execution is instant and gives you full cybersec module access.
+1. **Develop in Python**: Write and test your Hado script with `hado run script.ho`. Python execution is instant and gives you full cybersec module access.
 
-2. **Verify cross-compilation**: Run `habla compile --target go script.habla` (and c, rust) to ensure the code compiles cleanly for all targets.
+2. **Verify cross-compilation**: Run `hado compile --target go script.ho` (and c, rust) to ensure the code compiles cleanly for all targets.
 
 3. **Deploy to target**: When you need a standalone binary, concurrent execution, or memory safety, compile to the appropriate target and build with the native toolchain.
 
 ```bash
 # Development
-habla run recon.habla
+hado run recon.ho
 
 # Deploy as Go binary
-habla compile --target go recon.habla -o recon.go
+hado compile --target go recon.ho -o recon.go
 go build -o recon recon.go
 
 # Deploy as C binary
-habla compile --target c recon.habla -o recon.c
+hado compile --target c recon.ho -o recon.c
 gcc -O2 -o recon recon.c
 
 # Deploy as Rust binary
-habla compile --target rust recon.habla -o src/main.rs
+hado compile --target rust recon.ho -o src/main.rs
 cargo build --release
 ```
 
@@ -219,10 +219,10 @@ cargo build --release
 
 To add a fifth target (e.g., JavaScript/TypeScript):
 
-1. Create `src/habla/backends/js_backend.py` inheriting from `BaseTranspiler`
+1. Create `src/hado/backends/js_backend.py` inheriting from `BaseTranspiler`
 2. Implement all `_visit_{NodeType}()` methods
-3. Register in `src/habla/backends/__init__.py` (`TARGETS` dict + `get_backend()`)
-4. Add to CLI target choices in `src/habla/cli.py`
+3. Register in `src/hado/backends/__init__.py` (`TARGETS` dict + `get_backend()`)
+4. Add to CLI target choices in `src/hado/cli.py`
 5. Add tests in `tests/test_transpiler.py`
 
 The shared AST means the new backend only needs to handle code generation — lexing, parsing, and normalization are reused automatically.

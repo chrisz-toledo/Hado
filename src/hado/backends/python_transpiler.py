@@ -1,5 +1,5 @@
 """
-Habla DSL — Backend Python.
+Hado DSL — Backend Python.
 Convierte el AST a codigo Python ejecutable.
 """
 
@@ -27,21 +27,21 @@ _MODULE_IMPORTS = {
 
 # Mapa de imports de helpers de cybersec
 _HELPER_IMPORTS = {
-    "scan":             "from habla.cybersec.scanner import scan as _habla_scan",
-    "find_subdomains":  "from habla.cybersec.recon import find_subdomains as _habla_find_subdomains",
-    "capture":          "from habla.cybersec.capture import capture as _habla_capture",
-    "attack":           "from habla.cybersec.attack import attack as _habla_attack",
-    "analyze":          "from habla.cybersec.analysis import analyze as _habla_analyze",
-    "analyze_headers":  "from habla.cybersec.analysis import analyze_headers as _habla_analyze_headers",
-    "report":           "from habla.cybersec.report import report as _habla_report",
-    "hash_md5":         "from habla.cybersec.crypto import hash_md5 as _habla_hash_md5",
-    "hash_sha1":        "from habla.cybersec.crypto import hash_sha1 as _habla_hash_sha1",
-    "hash_sha256":      "from habla.cybersec.crypto import hash_sha256 as _habla_hash_sha256",
-    "hash_sha512":      "from habla.cybersec.crypto import hash_sha512 as _habla_hash_sha512",
-    "b64_encode":       "from habla.cybersec.crypto import b64_encode as _habla_b64_encode",
-    "b64_decode":       "from habla.cybersec.crypto import b64_decode as _habla_b64_decode",
-    "generate_token":   "from habla.cybersec.crypto import generate_token as _habla_generate_token",
-    "fuzz":             "from habla.cybersec.fuzzer import fuzz as _habla_fuzz",
+    "scan":             "from hado.cybersec.scanner import scan as _hado_scan",
+    "find_subdomains":  "from hado.cybersec.recon import find_subdomains as _hado_find_subdomains",
+    "capture":          "from hado.cybersec.capture import capture as _hado_capture",
+    "attack":           "from hado.cybersec.attack import attack as _hado_attack",
+    "analyze":          "from hado.cybersec.analysis import analyze as _hado_analyze",
+    "analyze_headers":  "from hado.cybersec.analysis import analyze_headers as _hado_analyze_headers",
+    "report":           "from hado.cybersec.report import report as _hado_report",
+    "hash_md5":         "from hado.cybersec.crypto import hash_md5 as _hado_hash_md5",
+    "hash_sha1":        "from hado.cybersec.crypto import hash_sha1 as _hado_hash_sha1",
+    "hash_sha256":      "from hado.cybersec.crypto import hash_sha256 as _hado_hash_sha256",
+    "hash_sha512":      "from hado.cybersec.crypto import hash_sha512 as _hado_hash_sha512",
+    "b64_encode":       "from hado.cybersec.crypto import b64_encode as _hado_b64_encode",
+    "b64_decode":       "from hado.cybersec.crypto import b64_decode as _hado_b64_decode",
+    "generate_token":   "from hado.cybersec.crypto import generate_token as _hado_generate_token",
+    "fuzz":             "from hado.cybersec.fuzzer import fuzz as _hado_fuzz",
 }
 
 # Traduccion de operadores
@@ -159,8 +159,13 @@ class PythonTranspiler(BaseTranspiler):
         return f"{self._ind()}return {val}".rstrip()
 
     def _visit_ShowStatement(self, node: ShowStatement) -> str:
-        val = self._visit(node.value) if node.value else "_pipe_input"
-        return f"{self._ind()}print({val})"
+        if node.values:
+            args = ", ".join(self._visit(v) for v in node.values)
+        elif node.value is not None:
+            args = self._visit(node.value)
+        else:
+            args = "_pipe_input"
+        return f"{self._ind()}print({args})"
 
     def _visit_SaveStatement(self, node: SaveStatement) -> str:
         fname = self._visit(node.filename) if node.filename else '"output.txt"'
@@ -183,19 +188,19 @@ class PythonTranspiler(BaseTranspiler):
         self.imports.need_helper("scan")
         target = self._visit(node.target) if node.target else '"127.0.0.1"'
         ports = "[" + ", ".join(self._visit(p) for p in node.ports) + "]"
-        return f"_habla_scan({target}, {ports})"
+        return f"_hado_scan({target}, {ports})"
 
     def _visit_CyberRecon(self, node: CyberRecon) -> str:
         self.imports.need("socket")
         self.imports.need_helper("find_subdomains")
         domain = self._visit(node.domain) if node.domain else '""'
-        return f"_habla_find_subdomains({domain})"
+        return f"_hado_find_subdomains({domain})"
 
     def _visit_CyberCapture(self, node: CyberCapture) -> str:
         self.imports.need_helper("capture")
         iface = self._visit(node.interface) if node.interface else '"eth0"'
         flt = self._visit(node.filter_expr) if node.filter_expr else '""'
-        return f"_habla_capture({iface}, {flt})"
+        return f"_hado_capture({iface}, {flt})"
 
     def _visit_CyberAttack(self, node: CyberAttack) -> str:
         self.imports.need_helper("attack")
@@ -203,21 +208,21 @@ class PythonTranspiler(BaseTranspiler):
         target = self._visit(node.target) if node.target else '""'
         wordlist = self._visit(node.wordlist) if node.wordlist else '[]'
         username = self._visit(node.username) if node.username else '"admin"'
-        return f"_habla_attack({service}, {target}, {wordlist}, {username})"
+        return f"_hado_attack({service}, {target}, {wordlist}, {username})"
 
     def _visit_CyberAnalyze(self, node: CyberAnalyze) -> str:
         source = self._visit(node.source) if node.source else 'None'
         # Si el modo es headers, usar analyze_headers directamente (A-F grade + lista)
         if getattr(node, 'mode', 'auto') == 'headers':
             self.imports.need_helper("analyze_headers")
-            return f"_habla_analyze_headers({source})"
+            return f"_hado_analyze_headers({source})"
         self.imports.need_helper("analyze")
-        return f"_habla_analyze({source})"
+        return f"_hado_analyze({source})"
 
     def _visit_CyberFindVulns(self, node: CyberFindVulns) -> str:
         self.imports.need_helper("analyze")
         target = self._visit(node.target) if node.target else 'None'
-        return f"_habla_analyze({target}, mode='vulns')"
+        return f"_hado_analyze({target}, mode='vulns')"
 
     def _visit_CyberEnumerate(self, node: CyberEnumerate) -> str:
         self.imports.need_helper("fuzz")
@@ -228,12 +233,12 @@ class PythonTranspiler(BaseTranspiler):
         if node.threads:
             kwargs.append(f"threads={self._visit(node.threads)}")
         kw_str = ", ".join(kwargs)
-        return f"_habla_fuzz({target}, {kw_str})"
+        return f"_hado_fuzz({target}, {kw_str})"
 
     def _visit_GenerateReport(self, node: GenerateReport) -> str:
         self.imports.need_helper("report")
         data = self._visit(node.data) if node.data else 'None'
-        return f"_habla_report({data})"
+        return f"_hado_report({data})"
 
     # ─── HTTP ────────────────────────────────────────────────────────────────
 
@@ -256,18 +261,18 @@ class PythonTranspiler(BaseTranspiler):
     def _visit_FilterExpression(self, node: FilterExpression) -> str:
         cond = self._visit(node.condition)
         var = node.var
-        src = self._visit(node.iterable) if node.iterable else "_habla_pipe_input"
+        src = self._visit(node.iterable) if node.iterable else "_hado_pipe_input"
         return f"[{var} for {var} in {src} if {cond}]"
 
     def _visit_SortExpression(self, node: SortExpression) -> str:
-        src = self._visit(node.source) if node.source else "_habla_pipe_input"
+        src = self._visit(node.source) if node.source else "_hado_pipe_input"
         if node.key:
             key_expr = self._visit(node.key)
             return f"sorted({src}, key=lambda _x: _x[{key_expr}])"
         return f"sorted({src})"
 
     def _visit_CountExpression(self, node: CountExpression) -> str:
-        src = self._visit(node.source) if node.source else "_habla_pipe_input"
+        src = self._visit(node.source) if node.source else "_hado_pipe_input"
         return f"len({src})"
 
     # ─── Literales ───────────────────────────────────────────────────────────
@@ -415,15 +420,15 @@ class PythonTranspiler(BaseTranspiler):
             self.imports.need_helper("find_subdomains")
             domain = self._visit(step.domain) if step.domain else '""'
             if out_var:
-                return f"{ind}{out_var} = _habla_find_subdomains({domain})"
-            return f"{ind}_habla_find_subdomains({domain})"
+                return f"{ind}{out_var} = _hado_find_subdomains({domain})"
+            return f"{ind}_hado_find_subdomains({domain})"
 
         elif isinstance(step, GenerateReport):
             self.imports.need_helper("report")
             # Si out_var es None (ultimo paso sin asignacion), emitir como statement
             if out_var:
-                return f"{ind}{out_var} = _habla_report({prev_var})"
-            return f"{ind}_habla_report({prev_var})"
+                return f"{ind}{out_var} = _hado_report({prev_var})"
+            return f"{ind}_hado_report({prev_var})"
 
         elif isinstance(step, FunctionCall):
             args = [prev_var] + [self._visit(a) for a in step.args]

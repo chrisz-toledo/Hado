@@ -1,46 +1,46 @@
-# Habla Tutorial — From Zero to Security Assessment
+# Hado Tutorial — From Zero to Security Assessment
 
-This tutorial walks you through Habla step by step, building real cybersecurity tools as you go.
+This tutorial walks you through Hado step by step, building real cybersecurity tools as you go.
 
 ## Prerequisites
 
 ```bash
-git clone https://github.com/chrisz-toledo/habla.git
-cd habla
+git clone https://github.com/chrisz-toledo/hado.git
+cd hado
 pip install -e .
 ```
 
 Verify the install:
 ```bash
-habla targets
+hado targets
 ```
 
 You should see four backends listed: Python (functional), Go (stub), C (functional), Rust (stub).
 
 ## Step 1: Hello World
 
-Create `hello.habla`:
+Create `hello.ho`:
 
-```habla
-muestra "Hola desde Habla!"
+```hado
+muestra "Hola desde Hado!"
 ```
 
 Run it:
 
 ```bash
-habla run hello.habla
+hado run hello.ho
 ```
 
 Output:
 ```
-Hola desde Habla!
+Hola desde Hado!
 ```
 
-That single line transpiles to `print("Hola desde Habla!")` — no imports, no boilerplate.
+That single line transpiles to `print("Hola desde Hado!")` — no imports, no boilerplate.
 
 ## Step 2: Variables and types
 
-```habla
+```hado
 target = "127.0.0.1"
 ports = [22, 80, 443, 8080]
 activo = cierto
@@ -57,7 +57,7 @@ Key values: `cierto` (true), `falso` (false), `nulo` (null/none).
 
 ## Step 3: Your first scan
 
-```habla
+```hado
 target = "127.0.0.1"
 escanea target en ports [22, 80, 443]
 ```
@@ -66,7 +66,7 @@ This generates Python that uses `socket.connect_ex` (or `nmap` if available). Th
 
 ## Step 4: Conditionals
 
-```habla
+```hado
 puerto = 80
 
 si puerto == 80
@@ -79,7 +79,7 @@ sino
 
 ## Step 5: Loops
 
-```habla
+```hado
 targets = ["192.168.1.1", "192.168.1.2", "192.168.1.3"]
 
 para t en targets
@@ -91,7 +91,7 @@ para t en targets
 
 ## Step 6: Functions
 
-```habla
+```hado
 fn escanear_target(ip)
   muestra "Iniciando escaneo de " + ip
   resultado = escanea ip en ports [22, 80, 443, 3306, 5432]
@@ -105,7 +105,7 @@ resultado2 = escanear_target("192.168.1.2")
 
 ## Step 7: HTTP requests
 
-```habla
+```hado
 url = "https://httpbin.org/json"
 datos = desde url
 muestra datos
@@ -115,9 +115,9 @@ muestra datos
 
 ## Step 8: Pipe chains
 
-The signature feature of Habla:
+The signature feature of Hado:
 
-```habla
+```hado
 busca subdomains de "example.com" -> filtra alive -> muestra
 ```
 
@@ -125,7 +125,7 @@ Each `->` passes the result of the previous step to the next. This replaces doze
 
 ## Step 9: Subdomain recon
 
-```habla
+```hado
 dominio = "example.com"
 subs = busca subdomains de dominio
 muestra "Encontrados: " + cuenta subs
@@ -140,7 +140,7 @@ guarda subs en "subdomains.txt"
 
 ## Step 10: Security analysis
 
-```habla
+```hado
 url = "https://example.com"
 muestra "Analizando headers de seguridad..."
 analiza headers de url
@@ -150,7 +150,7 @@ This checks HTTP security headers (HSTS, CSP, X-Frame-Options, etc.) and returns
 
 ## Step 11: Full assessment pipeline
 
-```habla
+```hado
 fn assessment(dominio)
   muestra "=== Assessment de " + dominio + " ==="
 
@@ -175,35 +175,35 @@ assessment("example.com")
 ## Step 12: See the generated code
 
 ```bash
-habla compile assessment.habla
+hado compile assessment.ho
 ```
 
 This shows the Python output. You can also target other backends:
 
 ```bash
-habla compile --target go assessment.habla
-habla compile --target c assessment.habla
-habla compile --target rust assessment.habla
+hado compile --target go assessment.ho
+hado compile --target c assessment.ho
+hado compile --target rust assessment.ho
 ```
 
 Save to a file:
 ```bash
-habla compile --target c assessment.habla -o assessment.c
+hado compile --target c assessment.ho -o assessment.c
 ```
 
 ## What happens under the hood?
 
 ```
-.habla → Normalizer → Lexer → Parser → AST → Backend → exec()
+.ho → Normalizer → Lexer → Parser → AST → Backend → exec()
           (ASCII)    (tokens)  (tree)        (Python)
 ```
 
-The normalizer strips diacritics (so `señal` and `senhal` are the same identifier). The lexer tokenizes including INDENT/DEDENT for blocks. The parser builds an AST. The Python backend traverses it and generates code with auto-injected imports. `habla run` executes this in memory.
+The normalizer strips diacritics (so `señal` and `senhal` are the same identifier). The lexer tokenizes including INDENT/DEDENT for blocks. The parser builds an AST. The Python backend traverses it and generates code with auto-injected imports. `hado run` executes this in memory.
 
 ## Next steps
 
 - Browse the [cybersec cookbook](cybersec-cookbook.md) for real-world recipes
 - Read the [language specification](spec.md) for the full reference
-- Check [design decisions](design-decisions.md) to understand why Habla works the way it does
+- Check [design decisions](design-decisions.md) to understand why Hado works the way it does
 - See [multi-target](multi-target.md) for the Go, C, and Rust backend vision
-- Read the [LLM guide](llm-guide.md) to integrate Habla with AI systems
+- Read the [LLM guide](llm-guide.md) to integrate Hado with AI systems

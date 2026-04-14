@@ -3,7 +3,7 @@ requires = ["setuptools>=61.0"]
 build-backend = "setuptools.build_meta"
 
 [project]
-name = "habla-lang"
+name = "hado-lang"
 version = "0.1.0"
 description = "A cybersecurity DSL designed for AI-native code generation"
 readme = "README.md"
@@ -46,13 +46,13 @@ dev = [
 ]
 
 [project.scripts]
-habla = "habla.cli:main"
+hado = "hado.cli:main"
 
 [project.urls]
-Homepage = "https://github.com/chrisz-toledo/habla"
-Repository = "https://github.com/chrisz-toledo/habla"
-Issues = "https://github.com/chrisz-toledo/habla/issues"
-Documentation = "https://github.com/chrisz-toledo/habla/tree/main/docs"
+Homepage = "https://github.com/chrisz-toledo/hado"
+Repository = "https://github.com/chrisz-toledo/hado"
+Issues = "https://github.com/chrisz-toledo/hado/issues"
+Documentation = "https://github.com/chrisz-toledo/hado/tree/main/docs"
 
 [tool.setuptools.packages.find]
 where = ["src"]

@@ -1,0 +1,36 @@
+// stdlib/crypto.habla — Hashing, encoding, y criptografia
+// Libreria estandar de Habla — v0.1 (operaciones disponibles via Python backend)
+//
+// Las funciones de crypto se implementan en habla.cybersec.crypto (Python).
+// Disponibles directamente desde el transpiler Python en v0.2.
+//
+// Por ahora: usa 'desde' para llamar APIs de hashing, o importa el modulo
+// habla.cybersec.crypto directamente desde Python si necesitas crypto local.
+//
+// Ejemplo de uso actual — verificar integridad de un archivo via API:
+//
+//   resultado = desde "https://api.hashify.net/hash/sha256/hex?value=mypassword"
+//   muestra resultado
+//
+// ─── Plan v0.2 (crypto nativo en Habla) ────────────────────────────────────
+//
+//   hash = sha256 de "password123"          // -> _habla_hash_sha256(...)
+//   encoded = base64_encode de "Habla DSL"  // -> _habla_b64_encode(...)
+//   token = genera token de 32              // -> _habla_generate_token(32)
+//   ok = verifica hash con "abc" esperando hash  // -> _habla_verify_hash(...)
+//
+// ─── Uso actual desde Python generado ───────────────────────────────────────
+// El modulo habla.cybersec.crypto ya existe y exporta:
+//   hash_md5(text)       -> str
+//   hash_sha1(text)      -> str
+//   hash_sha256(text)    -> str
+//   hash_sha512(text)    -> str
+//   b64_encode(text)     -> str
+//   b64_decode(text)     -> str
+//   hmac_sha256(key, msg) -> str
+//   generate_token(n)    -> str
+//   verify_hash(text, expected, algo) -> bool
+
+// Demo: lo que puedes hacer hoy en Habla con el modulo de analisis
+muestra "Crypto stdlib cargada."
+muestra "Ver docs/spec.md para la API de crypto en v0.2"

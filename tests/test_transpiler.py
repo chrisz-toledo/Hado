@@ -1,8 +1,8 @@
-"""Tests para el transpiler de Habla (los cuatro backends: Python, Go, Rust, C)."""
+"""Tests para el transpiler de Hado (los cuatro backends: Python, Go, Rust, C)."""
 
 import ast as pyast
 import pytest
-from habla.runtime import compile_to_source
+from hado.runtime import compile_to_source
 
 
 def py(source: str) -> str:
@@ -90,13 +90,13 @@ class TestPythonBackend:
 
     def test_cyber_scan_imports(self):
         code = py('escanea target "127.0.0.1" en ports [22, 80]\n')
-        assert "_habla_scan" in code
-        assert "from habla.cybersec.scanner import scan as _habla_scan" in code
+        assert "_hado_scan" in code
+        assert "from hado.cybersec.scanner import scan as _hado_scan" in code
         assert is_valid_python(code)
 
     def test_cyber_recon(self):
         code = py('busca subdomains de "example.com"\n')
-        assert "_habla_find_subdomains" in code
+        assert "_hado_find_subdomains" in code
         assert is_valid_python(code)
 
     def test_pipe_chain(self):
@@ -121,7 +121,7 @@ class TestPythonBackend:
 
     def test_complete_program(self):
         source = """
-nombre = "Habla"
+nombre = "Hado"
 version = 1
 muestra "Lenguaje: " + nombre
 si version >= 1
@@ -149,7 +149,7 @@ class TestCBackend:
     def test_cyber_scan_includes(self):
         code = c('escanea target "127.0.0.1" en ports [22, 80]\n')
         assert "#include <sys/socket.h>" in code
-        assert "habla_scan_port" in code
+        assert "hado_scan_port" in code
 
     def test_if_statement(self):
         code = c("si x > 0\n  muestra x\n")
@@ -259,7 +259,7 @@ class TestGoBackend:
         assert "&&" in code
 
     def test_targets_registry(self):
-        from habla.backends import TARGETS
+        from hado.backends import TARGETS
         assert "python" in TARGETS
         assert "go" in TARGETS
         assert "rust" in TARGETS
@@ -268,7 +268,7 @@ class TestGoBackend:
         assert TARGETS["python"]["status"] == "funcional"
 
     def test_base_backend_interface(self):
-        from habla.backends.base import HablaBackend, list_backends
+        from hado.backends.base import HadoBackend, list_backends
         backends = list_backends()
         assert "go" in backends
         assert "python" in backends

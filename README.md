@@ -81,7 +81,7 @@ The solution: a language where every token carries maximum semantic meaning. No 
 pip install habla-lang
 ```
 
-Create `hello.habla`:
+Create `hello.ho`:
 ```habla
 muestra "Hola mundo desde Habla!"
 
@@ -91,7 +91,7 @@ muestra "Bienvenido, " + nombre
 
 Run it:
 ```bash
-habla run hello.habla
+hado run hello.ho
 ```
 
 ---
@@ -148,11 +148,11 @@ captura packets en interface "eth0"
 
 ### 7. Four compilation targets
 ```bash
-habla compile script.habla               # Python (default)
-habla compile --target go script.habla   # Go  (go build)
-habla compile --target c script.habla    # C   (gcc/clang)
-habla compile --target rust script.habla # Rust (rustc/cargo)
-habla run script.habla                   # Execute via Python
+hado compile script.ho               # Python (default)
+hado compile --target go script.ho   # Go  (go build)
+hado compile --target c script.ho    # C   (gcc/clang)
+hado compile --target rust script.ho # Rust (rustc/cargo)
+hado run script.ho                   # Execute via Python
 habla targets                            # List all backends and their status
 ```
 
@@ -255,7 +255,7 @@ See [docs/llm-guide.md](docs/llm-guide.md) for the complete guide including all 
 
 ```
 ┌─────────────┐
-│ .habla file │
+│ .ho file │
 └──────┬──────┘
        │
        ▼

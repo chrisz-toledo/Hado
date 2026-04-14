@@ -1,0 +1,10 @@
+// stdlib/texto.habla — Manipulacion de strings
+// Libreria estandar de Habla para operaciones de texto
+
+// Concatenar dos strings
+fn concatenar(a, b)
+  devuelve a + b
+
+// Mostrar con etiqueta
+fn mostrar_con_etiqueta(etiqueta, valor)
+  muestra etiqueta + ": " + valor

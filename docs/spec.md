@@ -1,22 +1,22 @@
-# Habla Language Specification v0.1.0
+# Hado Language Specification v0.1.0
 
-Habla is a cybersecurity DSL that transpiles to Python, Go, C, and Rust. This is the formal language specification.
+Hado is a cybersecurity DSL that transpiles to Python, Go, C, and Rust. This is the formal language specification.
 
 ## 1. Lexical structure
 
 ### 1.1 Character set
 
-Habla source files are UTF-8 encoded. The normalizer converts Spanish diacritics to ASCII before lexing. Keywords are always ASCII.
+Hado source files are UTF-8 encoded. The normalizer converts Spanish diacritics to ASCII before lexing. Keywords are always ASCII.
 
 ### 1.2 Comments
 
-```habla
+```hado
 // This is a comment — everything to end of line is ignored
 ```
 
 ### 1.3 Indentation
 
-Habla uses significant whitespace (Python-style). Blocks are defined by consistent indentation. Either spaces or tabs may be used, but not mixed. Tabs count as 4 spaces. The lexer emits INDENT and DEDENT tokens to mark block boundaries.
+Hado uses significant whitespace (Python-style). Blocks are defined by consistent indentation. Either spaces or tabs may be used, but not mixed. Tabs count as 4 spaces. The lexer emits INDENT and DEDENT tokens to mark block boundaries.
 
 ### 1.4 Keywords (40 total)
 
@@ -80,9 +80,9 @@ COMMA  COLON  DOT  COMMENT  EOF
 
 ## 2. Types
 
-Habla uses implicit typing. The transpiler infers types from context.
+Hado uses implicit typing. The transpiler infers types from context.
 
-| Habla literal | Python | Go | C | Rust |
+| Hado literal | Python | Go | C | Rust |
 |--------------|--------|-----|--------|-----------|
 | `42` | `int` | `int` | `int` | `i64` |
 | `3.14` | `float` | `float64` | `double` | `f64` |
@@ -96,12 +96,12 @@ Habla uses implicit typing. The transpiler infers types from context.
 ## 3. Statements
 
 ### 3.1 Assignment
-```habla
+```hado
 variable = expresion
 ```
 
 ### 3.2 Conditional
-```habla
+```hado
 si condicion
   bloque_verdadero
 sino
@@ -109,13 +109,13 @@ sino
 ```
 
 ### 3.3 While loop
-```habla
+```hado
 mientras condicion
   bloque
 ```
 
 ### 3.4 For loop
-```habla
+```hado
 para variable en iterable
   bloque
 
@@ -126,14 +126,14 @@ cada variable en iterable
 Both `para` and `cada` are identical — use whichever reads better.
 
 ### 3.5 Function definition
-```habla
+```hado
 fn nombre(param1 param2)
   bloque
   devuelve valor
 ```
 
 Parameters are space-separated OR comma-separated:
-```habla
+```hado
 fn suma(a, b)
   devuelve a + b
 
@@ -142,18 +142,18 @@ fn mult a b
 ```
 
 ### 3.6 Display
-```habla
+```hado
 muestra expresion
 ```
 
 ### 3.7 File I/O
-```habla
+```hado
 contenido = lee "archivo.txt"
 guarda datos en "output.txt"
 ```
 
 ### 3.8 HTTP
-```habla
+```hado
 datos = desde "https://api.com/endpoint"
 datos = desde "https://api.com" con headers {"Authorization": token}
 ```
@@ -161,7 +161,7 @@ datos = desde "https://api.com" con headers {"Authorization": token}
 ## 4. Expressions
 
 ### 4.1 Pipe operator
-```habla
+```hado
 expresion -> paso1 -> paso2 -> paso3
 ```
 
@@ -179,7 +179,7 @@ Built-in pipe steps:
 - `busca subdomains` — find subdomains of piped input
 
 ### 4.2 Comparison operators
-```habla
+```hado
 x == y    // igual
 x != y    // distinto
 x >= y    // mayor o igual
@@ -191,19 +191,19 @@ x en L    // pertenece a la lista
 ```
 
 ### 4.3 Logical operators
-```habla
+```hado
 a y b     // and
 a o b     // or
 no a      // not
 ```
 
 ### 4.4 String concatenation
-```habla
+```hado
 "Hola " + nombre
 ```
 
 ### 4.5 Property access and indexing
-```habla
+```hado
 respuesta.status
 resultado.open_ports
 lista[0]
@@ -215,62 +215,62 @@ diccionario["clave"]
 All cybersecurity constructs work both as statements and as expression-level constructs (assignable to variables, usable in string concatenation, etc.).
 
 ### 5.1 Port scan
-```habla
+```hado
 escanea target "ip" en ports [22, 80, 443]
 resultado = escanea target "192.168.1.1" en ports [22, 80]
 escanea variable en ports [80, 443]
 ```
 
-Python backend: calls `habla.cybersec.scanner.scan()` which uses nmap (if available) or raw sockets.
+Python backend: calls `hado.cybersec.scanner.scan()` which uses nmap (if available) or raw sockets.
 
 ### 5.2 Subdomain recon
-```habla
+```hado
 subs = busca subdomains de "ejemplo.com"
 subs = busca subdomains de dominio
 ```
 
-Python backend: calls `habla.cybersec.recon.find_subdomains()` which does DNS-based enumeration.
+Python backend: calls `hado.cybersec.recon.find_subdomains()` which does DNS-based enumeration.
 
 ### 5.3 Vulnerability search
-```habla
+```hado
 busca vulns en target donde severity >= HIGH
 ```
 
 ### 5.4 Packet capture
-```habla
+```hado
 captura packets en interface "eth0" donde "tcp port 443"
 ```
 
-Python backend: calls `habla.cybersec.capture.capture()` which uses scapy or tcpdump.
+Python backend: calls `hado.cybersec.capture.capture()` which uses scapy or tcpdump.
 
 ### 5.5 Brute force
-```habla
+```hado
 ataca "ssh" en target con wordlist "rockyou.txt"
 ataca "http" en "https://login.ejemplo.com" con usuario "admin" y wordlist "passwords.txt"
 ```
 
 Supported services: `ssh`, `http`, `http-post`, `http-get`, `ftp`.
-Python backend: calls `habla.cybersec.attack.attack()` using paramiko (SSH), requests (HTTP), ftplib (FTP).
+Python backend: calls `hado.cybersec.attack.attack()` using paramiko (SSH), requests (HTTP), ftplib (FTP).
 
 ### 5.6 Security analysis
-```habla
+```hado
 analiza headers de url
 analiza resultados
 ```
 
-Python backend: calls `habla.cybersec.analysis.analyze()` which scores HTTP security headers (A-F grade) and analyzes port risk.
+Python backend: calls `hado.cybersec.analysis.analyze()` which scores HTTP security headers (A-F grade) and analyzes port risk.
 
 ### 5.7 Report generation
-```habla
+```hado
 genera reporte con resultados
 genera reporte con datos -> guarda "report.md"
 ```
 
-Formats: markdown, html, json, text. Python backend: calls `habla.cybersec.report.report()`.
+Formats: markdown, html, json, text. Python backend: calls `hado.cybersec.report.report()`.
 
 ## 6. Cryptography (Python module — v0.1)
 
-The `habla.cybersec.crypto` Python module provides:
+The `hado.cybersec.crypto` Python module provides:
 
 | Function | Description |
 |----------|-------------|
@@ -284,7 +284,7 @@ The `habla.cybersec.crypto` Python module provides:
 | `generate_token(n)` | Cryptographic random hex token |
 | `verify_hash(text, expected, algo)` | Hash verification |
 
-Native Habla syntax for crypto operations is planned for v0.2.
+Native Hado syntax for crypto operations is planned for v0.2.
 
 ## 7. ASCII normalization
 
@@ -304,13 +304,13 @@ Applied to identifiers and keywords only, not to string literals:
 ## 8. Multi-target transpilation
 
 ```bash
-habla compile script.habla                  # Python (default)
-habla compile --target go script.habla      # Go
-habla compile --target c script.habla       # C
-habla compile --target rust script.habla    # Rust
-habla run script.habla                      # Execute via Python
-habla run --target go script.habla          # Show generated Go
-habla targets                               # List all backends
+hado compile script.ho                  # Python (default)
+hado compile --target go script.ho      # Go
+hado compile --target c script.ho       # C
+hado compile --target rust script.ho    # Rust
+hado run script.ho                      # Execute via Python
+hado run --target go script.ho          # Show generated Go
+hado targets                               # List all backends
 ```
 
 Backend status (v0.1):
@@ -329,7 +329,7 @@ Program, Assignment, IfStatement, WhileStatement, ForStatement, FunctionDef, Ret
 ## 10. Compiler pipeline
 
 ```
-source.habla → Normalizer → Lexer → Parser → AST → Backend → target code
+source.ho → Normalizer → Lexer → Parser → AST → Backend → target code
                  (ASCII)   (tokens)  (tree)        (Python/Go/C/Rust)
 ```
 

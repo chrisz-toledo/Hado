@@ -1,5 +1,5 @@
 """
-Habla DSL — Nodos del AST.
+Hado DSL — Nodos del AST.
 Todos los nodos son dataclasses inmutables con un campo `line` para tracking de errores.
 """
 
@@ -62,8 +62,13 @@ class ReturnStatement(Node):
 
 @dataclass
 class ShowStatement(Node):
-    """muestra X — puede aparecer como statement o como paso terminal de un pipe."""
-    value: Optional[Node] = None  # None cuando recibe input del pipe
+    """
+    muestra X [, Y, Z ...] — imprime uno o varios valores.
+    En contexto de pipe: value=None, los valores vienen del step anterior.
+    En contexto de statement: values contiene todos los args.
+    """
+    value: Optional[Node] = None          # compat: pipe context / single arg
+    values: List[Node] = field(default_factory=list)  # multi-arg: muestra a, b, c
 
 
 @dataclass

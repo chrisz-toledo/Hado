@@ -1,6 +1,6 @@
-# Habla Cybersecurity Cookbook
+# Hado Cybersecurity Cookbook
 
-Common cybersecurity recipes in Habla. All examples require authorization on the target systems.
+Common cybersecurity recipes in Hado. All examples require authorization on the target systems.
 
 **Warning**: Only use these tools on systems you own or have explicit authorization to test.
 
@@ -9,7 +9,7 @@ Common cybersecurity recipes in Habla. All examples require authorization on the
 ## Reconnaissance
 
 ### Subdomain enumeration
-```habla
+```hado
 dominio = "target.com"
 subs = busca subdomains de dominio
 muestra "Subdominios encontrados: " + cuenta subs
@@ -19,18 +19,18 @@ guarda subs en "subs.txt"
 ```
 
 ### Quick port scan
-```habla
+```hado
 escanea target "192.168.1.1" en ports [21, 22, 23, 25, 80, 443, 3306, 5432, 8080, 8443]
 ```
 
 ### Scan with variable target
-```habla
+```hado
 ip = "10.0.0.1"
 escanea ip en ports [22, 80, 443]
 ```
 
 ### Full OSINT pipeline
-```habla
+```hado
 dominio = "target.com"
 
 // Fase 1: Subdominios vivos
@@ -46,7 +46,7 @@ genera reporte con subs
 ```
 
 ### Multi-target scan
-```habla
+```hado
 targets = ["192.168.1.1", "192.168.1.2", "192.168.1.254", "10.0.0.1"]
 
 para ip en targets
@@ -59,7 +59,7 @@ para ip en targets
 ## Web Application Testing
 
 ### Analizar headers de seguridad
-```habla
+```hado
 url = "https://target.com"
 analiza headers de url
 ```
@@ -67,13 +67,13 @@ analiza headers de url
 This checks for: Strict-Transport-Security, Content-Security-Policy, X-Frame-Options, X-Content-Type-Options, X-XSS-Protection, Referrer-Policy, Permissions-Policy, Cache-Control, and Pragma. Returns a score (0-100) and grade (A-F).
 
 ### HTTP data retrieval
-```habla
+```hado
 datos = desde "https://api.target.com/v1/users"
 muestra datos
 ```
 
 ### Fuzzing de parametros HTTP
-```habla
+```hado
 payloads = ["' OR 1=1--", "<script>alert(1)</script>", "../../../etc/passwd"]
 base_url = "https://target.com/search?q="
 
@@ -89,19 +89,19 @@ para payload en payloads
 ## Network Analysis
 
 ### Captura de trafico HTTP
-```habla
+```hado
 captura packets en interface "eth0" donde "tcp port 80"
 ```
 
 Uses scapy if available, falls back to tcpdump. Returns a list of packet summaries.
 
 ### Captura de trafico HTTPS
-```habla
+```hado
 captura packets en interface "en0" donde "tcp port 443"
 ```
 
 ### Captura con conteo limitado
-```habla
+```hado
 captura 50 packets en interface "wlan0" donde "udp"
 ```
 
@@ -110,7 +110,7 @@ captura 50 packets en interface "wlan0" donde "udp"
 ## Credential Testing
 
 ### Brute force SSH
-```habla
+```hado
 // SOLO en entornos autorizados
 target = "192.168.1.100"
 ataca "ssh" en target con wordlist "rockyou.txt"
@@ -119,18 +119,18 @@ ataca "ssh" en target con wordlist "rockyou.txt"
 Uses paramiko for SSH connections. Tests each password in the wordlist against the default user "admin".
 
 ### Brute force con usuario especifico
-```habla
+```hado
 ataca "ssh" en "192.168.1.100" con usuario "root" y wordlist "passwords.txt"
 ```
 
 ### Brute force HTTP login
-```habla
+```hado
 // SOLO en entornos autorizados
 ataca "http" en "https://target.com/login" con usuario "admin" y wordlist "passwords.txt"
 ```
 
 ### Brute force FTP
-```habla
+```hado
 ataca "ftp" en "192.168.1.50" con wordlist "common-passwords.txt"
 ```
 
@@ -138,11 +138,11 @@ ataca "ftp" en "192.168.1.50" con wordlist "common-passwords.txt"
 
 ## Cryptography (via Python module)
 
-The `habla.cybersec.crypto` module is available in generated Python code:
+The `hado.cybersec.crypto` module is available in generated Python code:
 
 ```python
 # In your generated Python, you can import directly:
-from habla.cybersec.crypto import hash_sha256, b64_encode, generate_token, verify_hash
+from hado.cybersec.crypto import hash_sha256, b64_encode, generate_token, verify_hash
 
 # Hash a password
 h = hash_sha256("password123")
@@ -157,24 +157,24 @@ ok = verify_hash("password123", h, "sha256")
 encoded = b64_encode("sensitive data")
 ```
 
-Native Habla syntax for crypto (`sha256 de "text"`) is coming in v0.2.
+Native Hado syntax for crypto (`sha256 de "text"`) is coming in v0.2.
 
 ---
 
 ## Reporting
 
 ### Reporte simple
-```habla
+```hado
 genera reporte con resultados
 ```
 
 ### Reporte con output a archivo
-```habla
+```hado
 genera reporte con resultados -> guarda "security-report.md"
 ```
 
 ### Assessment completo con reporte
-```habla
+```hado
 fn assessment(dominio)
   muestra "=== Security Assessment: " + dominio + " ==="
 
@@ -201,17 +201,17 @@ assessment("target.com")
 ## Pipes — Data Flow Recipes
 
 ### Recon to report pipeline
-```habla
+```hado
 busca subdomains de "target.com" -> filtra alive -> genera reporte
 ```
 
 ### Filter and sort
-```habla
+```hado
 datos -> filtra donde score > 50 -> ordena por nombre -> muestra
 ```
 
 ### Count results
-```habla
+```hado
 subs = busca subdomains de "target.com"
 muestra "Total: " + cuenta subs
 ```
@@ -223,10 +223,10 @@ muestra "Total: " + cuenta subs
 Every recipe in this cookbook compiles to all four backends:
 
 ```bash
-habla compile recipe.habla                  # Python (executable)
-habla compile --target go recipe.habla      # Go (concurrent stubs)
-habla compile --target c recipe.habla       # C (low-level sockets)
-habla compile --target rust recipe.habla    # Rust (memory-safe)
+hado compile recipe.ho                  # Python (executable)
+hado compile --target go recipe.ho      # Go (concurrent stubs)
+hado compile --target c recipe.ho       # C (low-level sockets)
+hado compile --target rust recipe.ho    # Rust (memory-safe)
 ```
 
 Python is fully functional. Go, C, and Rust generate compilable code with comments pointing to the appropriate libraries for each platform.

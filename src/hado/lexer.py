@@ -1,7 +1,7 @@
 """
-Habla DSL — Lexer / Tokenizador.
+Hado DSL — Lexer / Tokenizador.
 
-Convierte codigo fuente Habla en una secuencia de tokens.
+Convierte codigo fuente Hado en una secuencia de tokens.
 Maneja INDENT/DEDENT basado en indentacion (estilo Python).
 """
 
@@ -198,9 +198,28 @@ class Lexer:
                 )
 
             token_type = self._classify(group, value)
+            # Normalizar strings a double-quote en lex time
+            if token_type == TokenType.STRING:
+                value = self._normalize_string(value)
             tokens.append(Token(token_type, value, line_num, col))
 
         return tokens
+
+    @staticmethod
+    def _normalize_string(raw: str) -> str:
+        """
+        Normaliza cualquier literal de string a comillas dobles.
+        Soporta: 'x', "x", '''x''', \"\"\"x\"\"\".
+        Garantiza que StringLiteral.value siempre sea "..." para output consistente.
+        """
+        if raw.startswith('"""') or raw.startswith("'''"):
+            inner = raw[3:-3]
+        elif raw.startswith("'"):
+            # Unescape single quotes, escape double quotes
+            inner = raw[1:-1].replace("\\'", "'").replace('"', '\\"')
+        else:
+            return raw  # ya es double-quoted — sin cambios
+        return f'"{inner}"'
 
     def _classify(self, group: str, value: str) -> TokenType:
         if group == "IDENTIFIER":

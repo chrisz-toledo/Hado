@@ -1,12 +1,12 @@
-# Habla LLM Guide — How to Generate Habla Code
+# Hado LLM Guide — How to Generate Hado Code
 
-This document is designed to be given to an LLM (Claude, GPT, etc.) as context so it can generate correct Habla code without hallucinations.
+This document is designed to be given to an LLM (Claude, GPT, etc.) as context so it can generate correct Hado code without hallucinations.
 
 ---
 
-## What is Habla? (for the LLM)
+## What is Hado? (for the LLM)
 
-Habla is a cybersecurity DSL that transpiles to Python, Go, C, and Rust. It uses Spanish verbs as operators and English nouns for technical terms. It is indentation-based, has zero imports, zero type annotations, and uses `->` pipes to chain operations.
+Hado is a cybersecurity DSL that transpiles to Python, Go, C, and Rust. It uses Spanish verbs as operators and English nouns for technical terms. It is indentation-based, has zero imports, zero type annotations, and uses `->` pipes to chain operations.
 
 The transpiler handles all boilerplate — the LLM just writes the logic.
 
@@ -14,10 +14,10 @@ The transpiler handles all boilerplate — the LLM just writes the logic.
 
 ## System Prompt Template
 
-Copy this into your system prompt to enable correct Habla code generation:
+Copy this into your system prompt to enable correct Hado code generation:
 
 ```
-You are an expert in Habla, a cybersecurity DSL that transpiles to Python, Go, C, and Rust.
+You are an expert in Hado, a cybersecurity DSL that transpiles to Python, Go, C, and Rust.
 
 RULES FOR GENERATING HABLA CODE:
 
@@ -92,16 +92,16 @@ ASCII normalization:
 ### Cybersecurity
 | Keyword | Meaning | Python module |
 |---------|---------|--------------|
-| `escanea target X en ports [...]` | Port scan | `habla.cybersec.scanner` |
-| `busca subdomains de X` | Subdomain enum | `habla.cybersec.recon` |
-| `busca vulns en target` | Vuln search | `habla.cybersec.analysis` |
-| `captura packets en interface X` | Packet capture | `habla.cybersec.capture` |
-| `ataca "service" en target con wordlist "f"` | Brute force | `habla.cybersec.attack` |
-| `analiza headers de X` | Security analysis | `habla.cybersec.analysis` |
-| `genera reporte con datos` | Report generation | `habla.cybersec.report` |
+| `escanea target X en ports [...]` | Port scan | `hado.cybersec.scanner` |
+| `busca subdomains de X` | Subdomain enum | `hado.cybersec.recon` |
+| `busca vulns en target` | Vuln search | `hado.cybersec.analysis` |
+| `captura packets en interface X` | Packet capture | `hado.cybersec.capture` |
+| `ataca "service" en target con wordlist "f"` | Brute force | `hado.cybersec.attack` |
+| `analiza headers de X` | Security analysis | `hado.cybersec.analysis` |
+| `genera reporte con datos` | Report generation | `hado.cybersec.report` |
 
 ### Logic operators
-| Habla | Python | Go | C | Rust |
+| Hado | Python | Go | C | Rust |
 |-------|--------|-----|---|------|
 | `y` | `and` | `&&` | `&&` | `&&` |
 | `o` | `or` | `\|\|` | `\|\|` | `\|\|` |
@@ -116,7 +116,7 @@ ASCII normalization:
 ## 10 Most Common Patterns
 
 ### 1. Variable assignment
-```habla
+```hado
 nombre = "Carlos"
 edad = 25
 activo = cierto
@@ -124,14 +124,14 @@ lista = [1, 2, 3]
 ```
 
 ### 2. Print / display
-```habla
+```hado
 muestra "Hola mundo"
 muestra "Usuario: " + nombre
 muestra "Total: " + cuenta lista
 ```
 
 ### 3. Conditional
-```habla
+```hado
 si edad >= 18
   muestra "adulto"
 sino
@@ -139,42 +139,42 @@ sino
 ```
 
 ### 4. For loop
-```habla
+```hado
 para item en lista
   muestra item
 ```
 
 ### 5. Function definition
-```habla
+```hado
 fn saludar(nombre)
   muestra "Hola, " + nombre
   devuelve "ok"
 ```
 
 ### 6. HTTP request
-```habla
+```hado
 datos = desde "https://api.ejemplo.com/users"
 ```
 
 ### 7. Port scan
-```habla
+```hado
 escanea target "192.168.1.1" en ports [22, 80, 443]
 ```
 
 ### 8. Subdomain recon with assignment
-```habla
+```hado
 subs = busca subdomains de "ejemplo.com"
 para s en subs
   muestra s
 ```
 
 ### 9. Pipe chain
-```habla
+```hado
 busca subdomains de "target.com" -> filtra alive -> genera reporte
 ```
 
 ### 10. Save results
-```habla
+```hado
 guarda resultados en "output.txt"
 ```
 
@@ -224,7 +224,7 @@ return x        # correct: devuelve x
 
 1. **Every token must carry meaning.** No boilerplate, no ceremony.
 2. **Cyber constructs need no imports.** The transpiler auto-injects them.
-3. **Use `cuenta X` not `len(X)`.** Habla wraps Python builtins.
+3. **Use `cuenta X` not `len(X)`.** Hado wraps Python builtins.
 4. **String concat with `+`.** The transpiler wraps variables in `str()`.
 5. **`para X en Y` not `for X in Y`.** All control flow is in Spanish.
 6. **`guarda X en "file"` not `save(X, "file")`.** File I/O is a keyword.
@@ -237,7 +237,7 @@ return x        # correct: devuelve x
 
 ## Generation checklist
 
-Before outputting Habla code, verify:
+Before outputting Hado code, verify:
 
 - [ ] No imports at the top
 - [ ] No type annotations anywhere
