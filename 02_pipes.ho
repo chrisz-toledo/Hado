@@ -1,0 +1,12 @@
+# Prueba 2: Tuberias (Pipes) y Encadenamiento
+muestra "=== INICIANDO PRUEBA 2: PIPES ==="
+
+objetivos = ["192.168.1.1", "10.0.0.5", "scanme.nmap.org"]
+
+muestra "[*] Imprimiendo matriz original usando pipe:"
+objetivos -> muestra
+
+muestra "[*] Contando e imprimiendo en un solo flujo continuo:"
+objetivos -> cuenta -> muestra
+
+muestra "=== FIN DE PRUEBA 2 ==="

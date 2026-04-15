@@ -1,0 +1,19 @@
+// 07-reporte-automatico.habla — Reporte de seguridad automatizado
+// Ejecutar: habla run 07-reporte-automatico.habla
+
+muestra "=== Security Assessment Automatizado ==="
+
+// Escaneo de targets locales
+target1 = "127.0.0.1"
+target2 = "localhost"
+
+muestra "Escaneando " + target1
+escanea target1 en ports [22, 80, 443, 3306, 5432, 8080]
+
+muestra "Escaneando " + target2
+escanea target2 en ports [22, 80, 443, 3306, 5432, 8080]
+
+// Reporte final
+muestra ""
+muestra "Assessment completado."
+muestra "Revisa los resultados arriba para puertos abiertos."

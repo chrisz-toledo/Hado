@@ -1,0 +1,5 @@
+muestra "=== INICIO DE PRUEBA REAL ==="
+target = "scanme.nmap.org"
+puertos_abiertos = escanea target en ports [22, 80, 443]
+muestra puertos_abiertos
+muestra "=== FIN DE PRUEBA ==="

@@ -1,0 +1,19 @@
+# Prueba 1: Sintaxis basica, variables y control de flujo
+muestra "=== INICIANDO PRUEBA 1: MOTOR CORE ==="
+
+comandante = "Christian"
+edad = 25
+sistema_activo = cierto
+
+muestra "Sesion iniciada para: " + comandante
+
+si sistema_activo
+    muestra "[+] Estado del motor: ONLINE"
+sino
+    muestra "[-] Estado del motor: OFFLINE"
+
+vectores = ["127.0.0.1", "scanme.nmap.org", "example.com"]
+muestra "[*] Cantidad de vectores cargados en memoria:"
+muestra cuenta vectores
+
+muestra "=== FIN DE PRUEBA 1 ==="

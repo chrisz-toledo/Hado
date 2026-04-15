@@ -1,0 +1,17 @@
+// 03-recon-pipeline.habla — Pipeline de reconocimiento
+// Ejecutar: habla run 03-recon-pipeline.habla
+// Nota: solo usar en dominios propios o con permiso
+
+objetivo = "example.com"
+
+// Buscar subdominios
+muestra "Buscando subdominios de " + objetivo
+subs = busca subdomains de objetivo
+
+muestra "Subdominios encontrados:"
+para s en subs
+  muestra "  -> " + s
+
+// Guardar resultados
+guarda subs en "recon-output.txt"
+muestra "Resultados guardados en recon-output.txt"
