@@ -40,7 +40,7 @@ class TokenType(Enum):
 KEYWORDS = frozenset({
     # Control de flujo
     "si", "sino", "mientras", "para", "cada", "en",
-    "fn", "devuelve", "retorna",
+    "fn", "devuelve",
     # Operaciones de display / IO
     "muestra", "guarda", "lee", "abre",
     # Operaciones de datos

@@ -314,12 +314,6 @@ class PythonTranspiler(BaseTranspiler):
         op = _OP_MAP.get(node.op, node.op)
         return f"{op} {operand}"
 
-    def _visit_TernaryExpression(self, node: TernaryExpression) -> str:
-        value = self._visit(node.value) if node.value else 'None'
-        cond = self._visit(node.condition) if node.condition else 'True'
-        alt = self._visit(node.alternative) if node.alternative else 'None'
-        return f"{value} if {cond} else {alt}"
-
     def _visit_PropertyAccess(self, node: PropertyAccess) -> str:
         obj = self._visit(node.obj)
         return f'{obj}["{node.prop}"]'

@@ -207,14 +207,6 @@ class BinaryOp(Node):
 
 
 @dataclass
-class TernaryExpression(Node):
-    """value si condition sino alternative  →  value if condition else alternative"""
-    value: Optional[Node] = None
-    condition: Optional[Node] = None
-    alternative: Optional[Node] = None
-
-
-@dataclass
 class UnaryOp(Node):
     op: str = ""
     operand: Optional[Node] = None

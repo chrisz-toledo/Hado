@@ -1,7 +1,0 @@
-// 02-escaneo-basico.habla — Escaneo de puertos
-// Ejecutar: habla run 02-escaneo-basico.habla
-// Nota: escanea tu propia maquina o entornos autorizados
-
-// Escaneo de puertos comunes en localhost
-target = "127.0.0.1"
-escanea target en ports [22, 80, 443, 8080]

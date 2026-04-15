@@ -1,6 +1,6 @@
-# Hado — Design Decisions
+# Habla — Design Decisions
 
-This document explains the "why" behind every major design decision in Hado.
+This document explains the "why" behind every major design decision in Habla.
 
 ---
 
@@ -8,9 +8,9 @@ This document explains the "why" behind every major design decision in Hado.
 
 A DSL lets us make strong assumptions about the problem domain. Cybersecurity has a well-defined vocabulary, a set of common patterns, and a clear program shape: recon, scan, analyze, report.
 
-A general-purpose language must handle every possible use case, which forces it to be more abstract and verbose. Hado hardwires the patterns that appear 90% of the time in cybersecurity code and compresses them into first-class constructs.
+A general-purpose language must handle every possible use case, which forces it to be more abstract and verbose. Habla hardwires the patterns that appear 90% of the time in cybersecurity code and compresses them into first-class constructs.
 
-The tradeoff: Hado is not designed for web servers or data science pipelines. It doesn't need to be. The domain focus is what makes it powerful.
+The tradeoff: Habla is not designed for web servers or data science pipelines. It doesn't need to be. The domain focus is what makes it powerful.
 
 ---
 
@@ -18,7 +18,7 @@ The tradeoff: Hado is not designed for web servers or data science pipelines. It
 
 Transpiling is faster to implement, allows leveraging existing ecosystems, and keeps the feedback loop short. Each target was chosen for a specific cybersecurity use case:
 
-**Python first** — The entire cybersecurity tooling ecosystem (nmap, scapy, requests, paramiko, dnspython) is in Python. Transpiling to Python means Hado code uses this entire ecosystem without re-implementing anything. Python is also what most security researchers already know.
+**Python first** — The entire cybersecurity tooling ecosystem (nmap, scapy, requests, paramiko, dnspython) is in Python. Transpiling to Python means Habla code uses this entire ecosystem without re-implementing anything. Python is also what most security researchers already know.
 
 **Go** — Concurrent scanners, standalone binaries, cloud-native security tools. Go compiles to a single binary with no dependencies, making it ideal for tools that need to be deployed across infrastructure. Libraries like nmap/v3, subfinder, nuclei, and gopacket provide the cybersecurity primitives.
 
@@ -77,11 +77,11 @@ report = generate_report(scan_results)
 
 You write:
 
-```hado
+```habla
 busca subdomains de domain -> filtra alive -> escanea ports [80, 443] -> genera reporte
 ```
 
-The Python version is approximately 60 tokens. The Hado version is 12 tokens. That's a 5x compression ratio.
+The Python version is approximately 60 tokens. The Habla version is 12 tokens. That's a 5x compression ratio.
 
 The transpiler generates intermediate `_pipe_N` variables for each step, maintaining full debuggability in the generated code.
 
@@ -99,7 +99,7 @@ The tradeoff: copy-pasting code between contexts can lose indentation. This is a
 
 ## 7. Why zero imports?
 
-Imports are pure boilerplate. Every Hado program that uses `desde` needs `import requests`. Every program that uses `escanea` needs socket imports. Making the user write these is wasted tokens for the LLM, an error-prone step (wrong module name, missing dependency), and a readability problem (imports at the top of a short script add noise).
+Imports are pure boilerplate. Every Habla program that uses `desde` needs `import requests`. Every program that uses `escanea` needs socket imports. Making the user write these is wasted tokens for the LLM, an error-prone step (wrong module name, missing dependency), and a readability problem (imports at the top of a short script add noise).
 
 The transpiler tracks which constructs are used during AST traversal and injects the necessary imports at the top of the generated code. This is deterministic — there's no ambiguity about which imports are needed.
 
@@ -111,7 +111,7 @@ For Python, the transpiler maintains two import registries: `_MODULE_IMPORTS` fo
 
 **AI-native use case**: Security researchers are early adopters of LLMs. They regularly ask AI to write recon scripts, scan tools, and exploit PoCs. A DSL optimized for this workflow reduces cost and errors.
 
-**High boilerplate ratio**: Cybersecurity Python scripts have enormous boilerplate (imports, error handling, output formatting). The compression ratio of Hado is highest here — a 40-line Python script becomes 8 lines of Hado.
+**High boilerplate ratio**: Cybersecurity Python scripts have enormous boilerplate (imports, error handling, output formatting). The compression ratio of Habla is highest here — a 40-line Python script becomes 8 lines of Habla.
 
 **Well-defined vocabulary**: The nouns (target, port, vuln, payload) and verbs (scan, recon, exploit, analyze) are universally understood. This makes LLM generation more reliable because the token space is constrained.
 
@@ -137,9 +137,9 @@ The alternative (a switch statement per backend) would create a single massive f
 
 ## 11. Why Python-first execution model?
 
-`hado run script.ho` transpiles to Python and executes in memory via `exec()`. There's no compilation step, no intermediate files, no waiting. This matches the "write and run" workflow that security researchers expect from scripting tools.
+`habla run script.habla` transpiles to Python and executes in memory via `exec()`. There's no compilation step, no intermediate files, no waiting. This matches the "write and run" workflow that security researchers expect from scripting tools.
 
-For Go, C, and Rust, `hado run` shows the generated code because compilation requires external toolchains. `hado compile -o output.go` generates the file for the user to compile with their own tools.
+For Go, C, and Rust, `habla run` shows the generated code because compilation requires external toolchains. `habla compile -o output.go` generates the file for the user to compile with their own tools.
 
 ---
 
@@ -155,4 +155,4 @@ Different cybersecurity use cases require different runtime characteristics:
 | Network tool for cloud | Single binary, no dependencies | Go |
 | Kernel module research | Direct hardware access needed | C |
 
-The multi-target approach means the same Hado source can be compiled for different deployment targets without rewriting the logic.
+The multi-target approach means the same Habla source can be compiled for different deployment targets without rewriting the logic.

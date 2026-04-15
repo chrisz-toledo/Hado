@@ -1,4 +1,4 @@
-# Hado — Roadmap de Desarrollo
+# Habla — Roadmap de Desarrollo
 
 > Estructurado con la filosofía de **Thinking in Systems** (Donella Meadows).  
 > Cada fase tiene un prompt de trabajo, un prompt de verificación, y condiciones de rechazo.  
@@ -6,17 +6,17 @@
 
 ---
 
-## Análisis del Sistema Hado
+## Análisis del Sistema Habla
 
 Antes de construir, entender lo que se está construyendo como sistema.
 
 ### Stocks (lo que se acumula)
-| Stock | Estado actual (v0.4) | Objetivo v1.0 |
+| Stock | Estado actual | Objetivo v1.0 |
 |---|---|---|
 | AST node types | ~35 nodos | ~50 nodos |
-| Backend implementations | 3 reales (Python, Go, C), 1 stub (Rust) | 4 reales |
-| Test coverage | 188 tests | 400+ tests |
-| Módulos cybersec | 7 (scanner, analysis, report, crypto, recon, attack, fuzzer) | 12+ |
+| Backend implementations | 1 real (Python), 3 stubs | 4 reales |
+| Test coverage | 117 tests | 400+ tests |
+| Módulos cybersec | 5 (scanner, analysis, report, crypto, recon) | 12+ |
 | Keywords del lenguaje | 40 | ~55 |
 | Ejemplos funcionales | 7 | 20+ |
 
@@ -52,25 +52,27 @@ La arquitectura `AST → múltiples backends` es inherentemente resiliente: si u
 
 ---
 
-## Estado Actual: v0.4 ✅
+## Estado Actual: v0.2 ✅
 
-**Lo que funciona en producción (verificado 2026-04-14):**
-- Lexer completo: comments `//`, pipes `->`, todos los tokens
-- Parser: todos los verbos cyber, comma-args, multi-arg muestra
-- Python backend: `scanner.py`, `analysis.py`, `report.py`, `crypto.py`, `recon.py`, `attack.py`, `fuzzer.py`
-- Go backend: genera código Go compilable con goroutines reales (`sync.WaitGroup` + `net.DialTimeout`)
-- C backend: genera código C con `#include` automáticos y `main()` funcional
-- Pipe chains funcionales en todos los backends
-- 188/188 tests pasando
+**Lo que funciona en producción (verificado 2026-04-12):**
+- Lexer completo: `#` comments, `|` pipes, todos los tokens
+- Parser: todos los verbos cyber, comma-args, `escanea ports de target`
+- Python backend: `scanner.py`, `analysis.py`, `report.py`, `crypto.py`, `recon.py`
+- Pipe chains en nivel de statement (`busca X | filtra Y | muestra`)
+- `genera report con a, b, c` (multi-arg)
+- 117/117 tests pasando
 
 **Lo que aún son stubs:**
-- Rust backend: genera código placeholder (Fase 5)
-- `captura packets` en Go/Rust/C: requieren librerías externas
-- `ataca` brute force en Go: requiere `golang.org/x/crypto/ssh` externo
+- Go backend: genera código placeholder no compilable
+- Rust backend: genera código placeholder no compilable
+- C backend: genera código placeholder no compilable
+- `captura packets` (en Python): lógica real falta
+- `ataca` (brute force): lógica real falta
+- `enumera directories` (fuzzer): keyword no existe aún
 
 ---
 
-## ✅ Fase 3 — Python Backend Completo (v0.3) — COMPLETADA
+## Fase 3 — Python Backend Completo (v0.3)
 
 > **Filosofía de sistemas**: Antes de construir más backends, maximizar el stock del backend Python. Un backend al 100% es más valioso que 4 backends al 25%.
 
@@ -93,29 +95,29 @@ La arquitectura `AST → múltiples backends` es inherentemente resiliente: si u
 ### PROMPT DE TRABAJO — Fase 3
 
 ```
-Proyecto: Hado DSL (github.com/chrisz-toledo/hado)
+Proyecto: Habla DSL (github.com/chrisz-toledo/habla)
 Tarea: Completar el backend Python con implementaciones reales para los módulos faltantes.
 
-MÓDULO 1: src/hado/cybersec/capture.py
+MÓDULO 1: src/habla/cybersec/capture.py
 - Implementar capture(interface, filter_expr, count) usando scapy
 - Si scapy no está disponible, fallback a socket raw (requiere root)
 - Retornar lista de dicts con: src_ip, dst_ip, protocol, port, payload_preview
-- El verb en Hado es: captura packets en interface "eth0" donde port == 443
+- El verb en Habla es: captura packets en interface "eth0" donde port == 443
 
-MÓDULO 2: src/hado/cybersec/attack.py
+MÓDULO 2: src/habla/cybersec/attack.py
 - Implementar brute_force(service, target, wordlist, username) 
 - Soportar services: "ssh", "ftp", "http-basic", "http-form"
 - SSH via paramiko, FTP via ftplib, HTTP via requests
 - Retornar dict con: service, target, found, credentials (si encontró), attempts
-- El verb en Hado es: ataca ssh en target con wordlist y username
+- El verb en Habla es: ataca ssh en target con wordlist y username
 
-MÓDULO 3: src/hado/cybersec/fuzzer.py
+MÓDULO 3: src/habla/cybersec/fuzzer.py
 - Implementar fuzz(target, wordlist, method, threads) usando requests + ThreadPoolExecutor
 - Descubrir directorios/endpoints con respuesta 200/301/302/403
-- El verb en Hado es: enumera directories en target (NUEVO — agregar al parser)
+- El verb en Habla es: enumera directories en target (NUEVO — agregar al parser)
 - Retornar dict con: target, found_paths, status_codes, total_requests
 
-MÓDULO 4: Mejorar src/hado/cybersec/recon.py
+MÓDULO 4: Mejorar src/habla/cybersec/recon.py
 - Agregar email_harvest(domain) usando requests a Hunter.io o búsqueda directa
 - Agregar whois_lookup(domain) usando python-whois
 - Agregar dns_records(domain) para A, MX, TXT, NS
@@ -123,7 +125,7 @@ MÓDULO 4: Mejorar src/hado/cybersec/recon.py
 MÓDULO 5: Agregar keyword "enumera" al parser
 - En lexer: agregar "enumera" a KEYWORDS
 - En parser: parse_enumera() que maneje "enumera directories en target"
-- En transpiler: _visit_Enumerate() que genere _hado_fuzz(target)
+- En transpiler: _visit_Enumerate() que genere _habla_fuzz(target)
 - En ast_nodes: class Enumerate(Node)
 
 REGLAS:
@@ -136,7 +138,7 @@ REGLAS:
 ### PROMPT DE VERIFICACIÓN — Fase 3
 
 ```
-Tengo el código de Hado v0.3 listo. Antes de marcar la fase como completa, 
+Tengo el código de Habla v0.3 listo. Antes de marcar la fase como completa, 
 ejecuta estas verificaciones en orden. Si alguna falla, reporta el error exacto 
 y NO avances a la siguiente fase.
 
@@ -146,30 +148,30 @@ VERIFICACION 1 — Tests no regresionaron:
   Si falla: git diff HEAD~1 -- tests/ y reportar qué se rompió
 
 VERIFICACION 2 — capture.py no es stub:
-  Comando: python -c "from hado.cybersec.capture import capture; import inspect; 
+  Comando: python -c "from habla.cybersec.capture import capture; import inspect; 
   src = inspect.getsource(capture); assert len(src.split('\n')) > 20, 'ES STUB'"
   Criterio: pasa sin AssertionError
 
 VERIFICACION 3 — attack.py soporta SSH:
-  Comando: python -c "from hado.cybersec.attack import brute_force; 
+  Comando: python -c "from habla.cybersec.attack import brute_force; 
   result = brute_force('ssh', '127.0.0.1', ['wrong1','wrong2'], 'nobody');
   assert 'found' in result and 'attempts' in result"
   Criterio: pasa sin error (no necesita encontrar credenciales, solo ejecutar)
 
 VERIFICACION 4 — fuzzer.py existe y es callable:
-  Comando: python -c "from hado.cybersec.fuzzer import fuzz; 
+  Comando: python -c "from habla.cybersec.fuzzer import fuzz; 
   r = fuzz('http://example.com', ['index','admin','api'], threads=2);
   assert 'found_paths' in r and 'total_requests' in r"
   Criterio: pasa sin error
 
 VERIFICACION 5 — keyword "enumera" funciona:
-  Comando: python -c "from hado import compile_to_source;
+  Comando: python -c "from habla import compile_to_source;
   out = compile_to_source('enumera directories en objetivo', target='python');
-  assert '_hado_fuzz' in out or 'fuzz' in out, 'No genera código de fuzzing'"
+  assert '_habla_fuzz' in out or 'fuzz' in out, 'No genera código de fuzzing'"
   Criterio: pasa sin AssertionError
 
 VERIFICACION 6 — Scan real en localhost:
-  Comando: hado run examples/test-local.ho
+  Comando: habla run examples/test-local.habla
   Criterio: output contiene 'open_ports' y 'method' sin errores
 
 CONDICION DE RECHAZO: Si cualquier verificación falla → 
@@ -178,11 +180,11 @@ CONDICION DE RECHAZO: Si cualquier verificación falla →
 
 ---
 
-## ✅ Fase 4 — Go Backend Real (v0.4) — COMPLETADA
+## Fase 4 — Go Backend Real (v0.4)
 
 > **Filosofía de sistemas**: El backend Go no es una copia del Python. Tiene un modelo mental diferente (concurrencia, canales, goroutines). Diseñarlo para ese modelo, no para simular Python.
 
-### Por qué Go para Hado
+### Por qué Go para Habla
 
 | Python | Go |
 |---|---|
@@ -203,7 +205,7 @@ import (
     "time"
 )
 
-func hadoScannear(target string, ports []int) map[int]bool {
+func hablaScannear(target string, ports []int) map[int]bool {
     results := make(map[int]bool)
     var mu sync.Mutex
     var wg sync.WaitGroup
@@ -229,10 +231,10 @@ func hadoScannear(target string, ports []int) map[int]bool {
 ### PROMPT DE TRABAJO — Fase 4
 
 ```
-Proyecto: Hado DSL (github.com/chrisz-toledo/hado)
+Proyecto: Habla DSL (github.com/chrisz-toledo/habla)
 Tarea: Implementar el backend Go con código Go real y compilable.
 
-ARCHIVO: src/hado/backends/go_transpiler.py
+ARCHIVO: src/habla/backends/go_transpiler.py
 
 El transpiler debe generar código Go que:
 1. COMPILA con `go build` sin errores
@@ -287,7 +289,7 @@ func main() {
 ```
 
 REGLAS:
-- El código generado DEBE compilar: go build -o /tmp/hado_test_go el_archivo.go
+- El código generado DEBE compilar: go build -o /tmp/habla_test_go el_archivo.go
 - Tests: agregar tests/test_go_backend.py que compilen y ejecuten el código generado
 - No usar librerías externas en el código Go (solo stdlib) para que funcione sin go mod
 - Al terminar: 15+ tests Go pasando
@@ -296,7 +298,7 @@ REGLAS:
 ### PROMPT DE VERIFICACIÓN — Fase 4
 
 ```
-Verificación del Go backend de Hado v0.4.
+Verificación del Go backend de Habla v0.4.
 Ejecutar en orden, no avanzar si alguno falla.
 
 VERIFICACION 1 — Tests no regresionaron:
@@ -305,25 +307,25 @@ VERIFICACION 1 — Tests no regresionaron:
 
 VERIFICACION 2 — Go genera código compilable:
   python -c "
-  from hado import compile_to_source
+  from habla import compile_to_source
   code = '''
   target = \"127.0.0.1\"
   scan = escanea target en ports [80, 443]
   muestra scan
   '''
   go_code = compile_to_source(code, target='go')
-  with open('/tmp/test_hado.go', 'w') as f:
+  with open('/tmp/test_habla.go', 'w') as f:
       f.write(go_code)
   "
-  go build -o /tmp/hado_test /tmp/test_hado.go
+  go build -o /tmp/habla_test /tmp/test_habla.go
   Criterio: go build termina sin errores
 
 VERIFICACION 3 — Go ejecuta y produce output:
-  /tmp/hado_test
+  /tmp/habla_test
   Criterio: output contiene información de puertos sin panic ni error
 
 VERIFICACION 4 — Goroutines están presentes:
-  grep -c "go func\|goroutine\|sync.WaitGroup" /tmp/test_hado.go
+  grep -c "go func\|goroutine\|sync.WaitGroup" /tmp/test_habla.go
   Criterio: >= 1 (el scanner usa concurrencia real)
 
 VERIFICACION 5 — Tests específicos de Go:
@@ -337,7 +339,7 @@ CONDICION DE RECHAZO: go build falla = backend no es real = no avanzar.
 
 ## Fase 5 — Rust Backend Real (v0.5)
 
-> **Filosofía de sistemas**: Rust tiene el feedback loop más fuerte de todos: el compilador rechaza código inseguro. Usar ese loop como ventaja — si el Hado-generado compila en Rust, es memory-safe por definición.
+> **Filosofía de sistemas**: Rust tiene el feedback loop más fuerte de todos: el compilador rechaza código inseguro. Usar ese loop como ventaja — si el Habla-generado compila en Rust, es memory-safe por definición.
 
 ### Qué debe generar en Rust
 
@@ -345,7 +347,7 @@ CONDICION DE RECHAZO: go build falla = backend no es real = no avanzar.
 use std::net::TcpStream;
 use std::time::Duration;
 
-fn hado_scan(target: &str, ports: &[u16]) -> Vec<(u16, bool)> {
+fn habla_scan(target: &str, ports: &[u16]) -> Vec<(u16, bool)> {
     ports.iter().map(|&port| {
         let addr = format!("{}:{}", target, port);
         let open = TcpStream::connect_timeout(
@@ -360,13 +362,13 @@ fn hado_scan(target: &str, ports: &[u16]) -> Vec<(u16, bool)> {
 ### PROMPT DE TRABAJO — Fase 5
 
 ```
-Proyecto: Hado DSL (github.com/chrisz-toledo/hado)
+Proyecto: Habla DSL (github.com/chrisz-toledo/habla)
 Tarea: Implementar el backend Rust con código Rust real que compile con rustc.
 
-ARCHIVO: src/hado/backends/rust_transpiler.py
+ARCHIVO: src/habla/backends/rust_transpiler.py
 
 REGLAS CRÍTICAS para Rust:
-1. El código generado DEBE compilar: rustc archivo.rs -o /tmp/hado_rust_test
+1. El código generado DEBE compilar: rustc archivo.rs -o /tmp/habla_rust_test
 2. Manejo de errores con Result<T, Box<dyn std::error::Error>>
 3. No usar unsafe{} a menos que sea absolutamente necesario
 4. Usar iteradores y closures idiomáticos de Rust
@@ -394,7 +396,7 @@ FUNCIONES A IMPLEMENTAR:
 
 GENERAR también un Cargo.toml mínimo cuando se usen dependencias externas.
 
-Al terminar: rustc debe compilar el output de al menos 10 programas Hado.
+Al terminar: rustc debe compilar el output de al menos 10 programas Habla.
 ```
 
 ### PROMPT DE VERIFICACIÓN — Fase 5
@@ -402,11 +404,11 @@ Al terminar: rustc debe compilar el output de al menos 10 programas Hado.
 ```
 VERIFICACION 1 — No regresiones: python -m pytest tests/ -q → 0 failures
 VERIFICACION 2 — Rust compila:
-  hado compile mcguire.ho --target rust -o /tmp/test.rs
-  rustc /tmp/test.rs -o /tmp/hado_rust_bin
+  habla compile mcguire.habla --target rust -o /tmp/test.rs
+  rustc /tmp/test.rs -o /tmp/habla_rust_bin
   Criterio: rustc termina sin error (warnings OK, errors NO)
 VERIFICACION 3 — Output correcto:
-  /tmp/hado_rust_bin
+  /tmp/habla_rust_bin
   Criterio: produce output sin panic
 VERIFICACION 4 — Sin unsafe:
   grep -c "unsafe" /tmp/test.rs
@@ -423,7 +425,7 @@ CONDICION DE RECHAZO: rustc error = no avanzar.
 ### PROMPT DE TRABAJO — Fase 6
 
 ```
-Proyecto: Hado DSL (github.com/chrisz-toledo/hado)
+Proyecto: Habla DSL (github.com/chrisz-toledo/habla)
 Tarea: Implementar el backend C que genere código compilable con gcc/clang.
 
 FUNCIONES CRÍTICAS:
@@ -440,7 +442,7 @@ FUNCIONES CRÍTICAS:
    → fprintf() a archivo JSON manual (sin dependencias)
 
 REGLAS:
-- gcc -Wall -o /tmp/hado_c_test el_archivo.c → 0 errors (warnings permitidos)
+- gcc -Wall -o /tmp/habla_c_test el_archivo.c → 0 errors (warnings permitidos)
 - No buffer overflows en el código generado (usar snprintf no sprintf)
 - strncpy no strcpy
 - Verificar malloc != NULL antes de usar
@@ -452,8 +454,8 @@ REGLAS:
 ```
 VERIFICACION 1 — No regresiones: python -m pytest tests/ -q → 0 failures
 VERIFICACION 2 — C compila: 
-  hado compile examples/01-escaneo-basico.ho --target c -o /tmp/test.c
-  gcc -Wall /tmp/test.c -o /tmp/hado_c_bin
+  habla compile examples/01-escaneo-basico.habla --target c -o /tmp/test.c
+  gcc -Wall /tmp/test.c -o /tmp/habla_c_bin
   Criterio: gcc termina sin error
 VERIFICACION 3 — No buffer overflows obvios:
   grep -c "sprintf[^n]" /tmp/test.c  → 0
@@ -469,9 +471,9 @@ CONDICION DE RECHAZO: gcc error = no avanzar.
 
 ### Features a implementar
 
-```hado
-# Importar módulos .ho entre sí
-importa "mi_scanner.ho" como scanner
+```habla
+# Importar módulos .habla entre sí
+importa "mi_scanner.habla" como scanner
 
 # Funciones con tipos implícitos
 fn escaneo_completo(objetivo, puertos)
@@ -493,14 +495,14 @@ lista[0]
 ### PROMPT DE TRABAJO — Fase 7
 
 ```
-Tarea: Implementar sistema de módulos y mejoras de funciones en Hado v0.7.
+Tarea: Implementar sistema de módulos y mejoras de funciones en Habla v0.7.
 
-FEATURE 1: importa "archivo.ho" como alias
+FEATURE 1: importa "archivo.habla" como alias
   - En lexer: agregar "importa" a KEYWORDS
   - En parser: parse_importa() → ImportStatement(path, alias)
   - En transpiler Python: ejecutar compile_to_source en el archivo importado
     e incluir las funciones como módulo
-  - Verificar: importa "utils.ho" como utils; utils.mi_funcion()
+  - Verificar: importa "utils.habla" como utils; utils.mi_funcion()
 
 FEATURE 2: Mejorar manejo de errors (lanza/atrapa ya existen en keywords)
   - Parser: parse_try_catch() para el bloque intenta/atrapa
@@ -530,38 +532,38 @@ VERIFICACION: 150+ tests passing, todos los ejemplos compilan
 ### PROMPT DE TRABAJO — Fase 8
 
 ```
-Tarea: Implementar tooling básico para Hado v0.8.
+Tarea: Implementar tooling básico para Habla v0.8.
 
-TOOL 1: hado compile --target [python|go|rust|c]
-  - Ya existe? Verificar CLI: hado --help
-  - Si no: agregar subcomando compile a src/hado/cli.py
+TOOL 1: habla compile --target [python|go|rust|c]
+  - Ya existe? Verificar CLI: habla --help
+  - Si no: agregar subcomando compile a src/habla/cli.py
   - Output: archivo .py/.go/.rs/.c en el directorio actual
 
-TOOL 2: hado check archivo.ho
+TOOL 2: habla check archivo.habla
   - Verificar sintaxis sin ejecutar
   - Output: "OK" o lista de errores con línea y columna
   - Útil para linters y pre-commit hooks
 
-TOOL 3: hado fmt archivo.ho
+TOOL 3: habla fmt archivo.habla
   - Auto-formateador: indentación consistente, espacios alrededor de operadores
   - Similiar a gofmt / rustfmt
 
 TOOL 4: syntax highlighting
-  - Archivo .ho.tmLanguage para VS Code
+  - Archivo .habla.tmLanguage para VS Code
   - Keywords en un color, strings en otro, comentarios en otro
   - Publicar como extension básica
 
 VERIFICACION:
-  hado compile mcguire.ho --target go → genera archivo .go que compila
-  hado check bad_syntax.ho → lista errores
-  hado fmt messy.ho → archivo formateado sin cambios semánticos
+  habla compile mcguire.habla --target go → genera archivo .go que compila
+  habla check bad_syntax.habla → lista errores
+  habla fmt messy.habla → archivo formateado sin cambios semánticos
 ```
 
 ---
 
 ## Condición Final para v1.0
 
-Hado es v1.0 cuando pasan TODAS estas verificaciones en CI/CD:
+Habla es v1.0 cuando pasan TODAS estas verificaciones en CI/CD:
 
 ```bash
 # Test suite completo
@@ -569,39 +571,37 @@ python -m pytest tests/ -q --tb=short
 # Criterio: >= 300 tests, 0 failures
 
 # Todos los backends compilan
-hado compile examples/01-escaneo-basico.ho --target python && python out.py
-hado compile examples/01-escaneo-basico.ho --target go    && go build out.go
-hado compile examples/01-escaneo-basico.ho --target rust  && rustc out.rs
-hado compile examples/01-escaneo-basico.ho --target c     && gcc out.c
+habla compile examples/01-escaneo-basico.habla --target python && python out.py
+habla compile examples/01-escaneo-basico.habla --target go    && go build out.go
+habla compile examples/01-escaneo-basico.habla --target rust  && rustc out.rs
+habla compile examples/01-escaneo-basico.habla --target c     && gcc out.c
 # Criterio: todos compilan sin error
 
 # Zero boilerplate verificado
-hado compile examples/01-escaneo-basico.ho --target python
-grep -c "^import\|^from" out.py  # Hado lo genera, el usuario no lo escribe
+habla compile examples/01-escaneo-basico.habla --target python
+grep -c "^import\|^from" out.py  # Habla lo genera, el usuario no lo escribe
 # Criterio: > 0 imports generados automáticamente, 0 escritos por el usuario
 
 # LLM generation test
-# Darle a un LLM: "escribe Hado para escanear puertos 80,443 en example.com"
+# Darle a un LLM: "escribe Habla para escanear puertos 80,443 en example.com"
 # El output debe ser sintácticamente válido en el primer intento
-# Criterio: hado check llm_output.ho → OK (sin errores de sintaxis)
+# Criterio: habla check llm_output.habla → OK (sin errores de sintaxis)
 ```
 
 ---
 
 ## Resumen de Fases
 
-| Fase | Version | Estado | Enfoque | Leverage Point |
-|---|---|---|---|---|
-| 1 | v0.1 | ✅ Completa | Core compiler, Python backend | AST + Lexer |
-| 2 | v0.2 | ✅ Completa | Lexer/parser robusto, módulos reales | Parser robusto |
-| 3 | v0.3 | ✅ Completa | Python completo (capture, attack, fuzzer) | Módulos backend |
-| 4 | v0.4 | ✅ Completa | Go backend real + goroutines (188 tests) | Concurrencia |
-| 5 | v0.5 | ⏳ Próxima | Rust backend real + memory safety | Safety |
-| 6 | v0.6 | ⏳ | C backend mejorado + libpcap | Kernel/exploit |
-| 7 | v0.7 | ⏳ | Módulos, multi-return, error handling | Extensibilidad |
-| 8 | v0.8 | ⏳ | Tooling: compile, check, fmt, VS Code | UX |
-| — | v1.0 | ⏳ | Todos los backends + 300+ tests + ecosistema | Comunidad |
+| Fase | Version | Enfoque | Leverage Point |
+|---|---|---|---|
+| ✅ 1 | v0.1 | Core compiler, Python backend | AST + Lexer |
+| ✅ 2 | v0.2 | Lexer/parser fixes, módulos reales | Parser robusto |
+| 🔄 3 | v0.3 | Python completo (capture, attack, fuzzer) | Módulos backend |
+| ⏳ 4 | v0.4 | Go backend real + goroutines | Concurrencia |
+| ⏳ 5 | v0.5 | Rust backend real + memory safety | Safety |
+| ⏳ 6 | v0.6 | C backend real + libpcap | Kernel/exploit |
+| ⏳ 7 | v0.7 | Módulos, multi-return, error handling | Extensibilidad |
+| ⏳ 8 | v0.8 | Tooling: compile, check, fmt, VS Code | UX |
+| ⏳ — | v1.0 | Todos los backends + 300+ tests + docs | Ecosistema |
 
 **Regla del sistema**: no saltarse fases. Cada fase es el stock que alimenta el siguiente.
-
-**Regla de doc-sync**: cada fase completada actualiza README.md, spec.md, tutorial.md y este roadmap en el mismo commit. La documentación desactualizada es un bug.

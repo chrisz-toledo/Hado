@@ -1,7 +1,7 @@
-"""Tests para el lexer de Hado."""
+"""Tests para el lexer de Habla."""
 
 import pytest
-from hado.lexer import Lexer, Token, TokenType
+from habla.lexer import Lexer, Token, TokenType
 
 
 def tokenize(source: str):
@@ -41,9 +41,8 @@ def test_string_double_quote():
 
 
 def test_string_single_quote():
-    # Single quotes se normalizan a dobles en lex-time (canonical form)
     tokens = token_types("'hola'")
-    assert tokens == [(TokenType.STRING, '"hola"')]
+    assert tokens == [(TokenType.STRING, "'hola'")]
 
 
 def test_pipe_operator():

@@ -1,104 +1,56 @@
-# Contribuir a Hado
+# Contributing to Habla
 
-Gracias por tu interés en contribuir a Hado.
+Thank you for your interest in contributing to Habla!
 
-## Setup
+## Getting started
 
 ```bash
-git clone https://github.com/chrisz-toledo/hado
-cd hado
+git clone https://github.com/chrisz-toledo/habla
+cd habla
 pip install -e ".[dev]"
 ```
 
-## Correr tests
+## Running tests
 
 ```bash
 pytest tests/
 ```
 
-Criterio mínimo antes de cada commit: **0 failures**.
+## Code style
 
----
+- Python code follows Black formatting (`black src/ tests/`)
+- All user-facing error messages must be in Spanish
+- New language features require: parser support + all four backends (Python, Go, C, Rust) + tests + documentation
 
-## ⚠️ Regla de doc-sync — obligatoria
+## Adding a new keyword
 
-**La documentación desactualizada es un bug.** Esta es la regla más importante del proyecto.
+1. Add the keyword to `KEYWORDS` in `src/habla/lexer.py`
+2. Add an AST node in `src/habla/ast_nodes.py` if needed
+3. Add parsing logic in `src/habla/parser.py`
+4. Add transpilation in all four backends:
+   - `src/habla/backends/python_transpiler.py`
+   - `src/habla/backends/go_backend.py`
+   - `src/habla/backends/c_transpiler.py`
+   - `src/habla/backends/rust_transpiler.py`
+5. Add tests in `tests/`
+6. Update `docs/spec.md`
 
-Todo commit que modifique el compilador, el AST o cualquier backend **debe** actualizar la documentación en el mismo commit. No en un commit posterior. No "lo hago después". En el mismo commit.
+## Adding a cybersec module
 
-### Qué actualizar según el tipo de cambio
+1. Create the module in `src/habla/cybersec/`
+2. Export from `src/habla/cybersec/__init__.py`
+3. Add the `_habla_X` import mapping in `src/habla/backends/python_transpiler.py`
+4. Add Go/C/Rust codegen stubs in the respective backends (with comments pointing to the native library to use per target)
+5. Add an example in `examples/`
 
-| Cambio | README.md | docs/spec.md | docs/tutorial.md | docs/roadmap.md |
-|--------|-----------|-------------|-----------------|-----------------|
-| Nuevo keyword | ✅ sección "Resumen del lenguaje" | ✅ sección keywords | ✅ si afecta ejemplos | — |
-| Backend funcional (stub→real) | ✅ tabla de backends | ✅ sección 8 (multi-target) | ✅ step compilación | ✅ tabla de fases |
-| Nuevo módulo cybersec | ✅ sección ejemplos | ✅ sección 5 (cybersec) | ✅ si hay nuevo ejemplo | — |
-| Fase completada | ✅ tabla roadmap | ✅ versión en título | — | ✅ fase marcada ✅ |
-| Fix de bug | — | — | — | — |
-| Nuevo test | — | — | — | — |
+## Design principles
 
-### Checklist de PR
+- Every token must carry maximum semantic meaning (no boilerplate)
+- Spanish verbs + English nouns (never translate technical terms)
+- ASCII-only keywords (no diacritics in the language spec)
+- Zero imports for the user (the transpiler handles all imports)
+- Error messages always in Spanish
 
-Antes de abrir un PR, verificar:
+## Reporting issues
 
-- [ ] `python -m pytest tests/ -q` → 0 failures
-- [ ] Si agregué un keyword: está en `docs/spec.md` sección 1.4
-- [ ] Si cambié un backend: la tabla de backends en README.md refleja el estado real
-- [ ] Si completé una fase: `docs/roadmap.md` tabla de resumen actualizada
-- [ ] Los ejemplos en la documentación compilan: `hado run example.ho`
-
----
-
-## Agregar un nuevo keyword
-
-1. Agregar el keyword a `KEYWORDS` en `src/hado/lexer.py`
-2. Agregar un nodo AST en `src/hado/ast_nodes.py` si es necesario
-3. Agregar lógica de parsing en `src/hado/parser.py`
-4. Agregar transpilación en los cuatro backends:
-   - `src/hado/backends/python_transpiler.py`
-   - `src/hado/backends/go_transpiler.py` ← (funcional desde Fase 4)
-   - `src/hado/backends/c_transpiler.py`
-   - `src/hado/backends/rust_transpiler.py`
-5. Agregar tests en `tests/`
-6. **Actualizar `docs/spec.md` sección 1.4 (keywords)**
-7. **Actualizar README.md si afecta los ejemplos principales**
-
-## Agregar un módulo cybersec
-
-1. Crear el módulo en `src/hado/cybersec/`
-2. Exportar desde `src/hado/cybersec/__init__.py`
-3. Agregar el mapping `_hado_X` en `src/hado/backends/python_transpiler.py`
-4. Agregar codegen en los demás backends (código real si el backend es funcional, stub comentado si no)
-5. Agregar ejemplo en `examples/`
-6. **Actualizar `docs/cybersec-cookbook.md` con la receta correspondiente**
-7. **Actualizar `docs/spec.md` sección 5 (cybersec constructs)**
-
-## Completar una fase del roadmap
-
-Cuando una fase del roadmap pase a "completa":
-
-1. **`README.md`**: actualizar tabla de backends y tabla de roadmap
-2. **`docs/spec.md`**: actualizar versión en el título (`v0.X.0`) y tabla multi-target
-3. **`docs/roadmap.md`**: marcar la fase como `✅ Completa`, actualizar la tabla de stocks y el estado actual
-4. **`docs/tutorial.md`**: actualizar si hay cambios en los pasos de uso
-5. Commit con mensaje: `docs: sync documentation — fase N completa`
-
----
-
-## Estilo de código
-
-- Python sigue el formato Black (`black src/ tests/`)
-- Todos los mensajes de error visibles al usuario deben estar en español
-- Los comentarios en el código fuente del compilador pueden ser en español o inglés
-
-## Principios de diseño
-
-- Cada token debe llevar el máximo significado semántico (sin boilerplate)
-- Verbos en español + sustantivos en inglés (nunca traducir términos técnicos)
-- Keywords solo ASCII (sin tildes en la especificación del lenguaje)
-- Cero imports para el usuario (el transpiler los maneja todos)
-- Mensajes de error siempre en español
-
-## Reportar issues
-
-Abrir un issue en https://github.com/chrisz-toledo/hado/issues
+Open an issue at https://github.com/chrisz-toledo/habla/issues

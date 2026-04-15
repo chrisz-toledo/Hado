@@ -1,0 +1,37 @@
+// concurrent_scanner_go.ho
+// Scanner concurrente compilado a Go — demuestra el límite superior de Hado.
+//
+// Python vs Go (mismo código Hado, diferente backend):
+//   Python: escanear 20 puertos en 1 host ≈ 2-10 segundos (secuencial)
+//   Go:     escanear 20 puertos en 1 host ≈ 0.1-0.5 segundos (goroutines)
+//
+// Para compilar y ejecutar como binario nativo sin Python:
+//   hado compile --target go concurrent_scanner_go.ho -o scanner.go
+//   go build scanner.go
+//   ./scanner
+//
+// El binario Go:
+//   - No requiere Python instalado en el target
+//   - Usa sync, net, fmt (stdlib only — cero deps externas)
+//   - Distribuible como binario único
+//   - Ideal para dropped tools en red interna
+
+fn scan_host(host)
+  muestra "Escaneando: " + host
+  // En Go, esta linea genera hado_scan() con goroutines reales:
+  //   - sync.WaitGroup espera todas las goroutines
+  //   - net.DialTimeout 2s por puerto
+  //   - TODOS los puertos se escanean EN PARALELO simultaneamente
+  // En Python, es secuencial (un puerto a la vez).
+  escanea host en ports [21, 22, 23, 80, 443, 3306, 3389, 5432, 6379, 8080]
+
+fn scan_multiple(hosts)
+  muestra "=== Scanner concurrente ==="
+  para host en hosts
+    scan_host(host)
+  muestra "=== Scan completo ==="
+
+// Ejemplo con hosts de red local
+// Cambiar por targets reales con permiso
+targets = ["192.168.1.1", "192.168.1.100", "192.168.1.254"]
+scan_multiple(targets)

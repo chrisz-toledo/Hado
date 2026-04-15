@@ -1,0 +1,45 @@
+// zero_day_recon.ho
+// Fase 1 de zero-day research: reconocimiento completo de infraestructura.
+//
+// Qué hace este script (100% funcional en Python backend):
+//   1. Enumera subdominios via DNS
+//   2. Escanea puertos críticos en cada subdominio
+//   3. Analiza headers HTTP del objetivo
+//   4. Genera reporte consolidado
+//
+// Uso:
+//   hado run zero_day_recon.ho
+//   hado compile --target go zero_day_recon.ho   // 10x más rápido en scan
+//
+// NOTA: Solo usar en sistemas propios o con permiso explícito por escrito.
+
+fn recon_completo(objetivo)
+  muestra "=== Zero-Day Recon: " + objetivo + " ==="
+
+  // Fase 1: Subdomain enumeration via DNS
+  muestra "[1/4] Enumerando subdominios..."
+  subs = busca subdomains de objetivo
+  muestra "Encontrados: " + cuenta subs
+
+  // Fase 2: Port scan — puertos de alto valor para pentest
+  // 21=FTP, 22=SSH, 23=Telnet(CRITICAL), 25=SMTP
+  // 80=HTTP, 443=HTTPS, 3306=MySQL, 5432=PostgreSQL
+  // 6379=Redis, 27017=MongoDB, 3389=RDP(CRITICAL), 445=SMB(CRITICAL)
+  muestra "[2/4] Escaneando puertos criticos..."
+  para sub en subs
+    muestra "  Escaneando " + sub
+    escanea sub en ports [21, 22, 23, 25, 80, 443, 3306, 3389, 445, 5432, 6379, 8080]
+
+  // Fase 3: HTTP security headers
+  // HSTS ausente = downgrade attack
+  // CSP ausente = XSS posible
+  // X-Frame-Options ausente = clickjacking
+  muestra "[3/4] Analizando headers de seguridad..."
+  analiza headers de objetivo
+
+  // Fase 4: Reporte final
+  muestra "[4/4] Generando reporte..."
+  genera reporte con subs
+  muestra "=== Recon completo ==="
+
+recon_completo("example.com")

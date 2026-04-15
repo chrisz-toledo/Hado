@@ -1,8 +1,8 @@
-"""Tests para el transpiler de Hado (los cuatro backends: Python, Go, Rust, C)."""
+"""Tests para el transpiler de Habla (los cuatro backends: Python, Go, Rust, C)."""
 
 import ast as pyast
 import pytest
-from hado.runtime import compile_to_source
+from habla.runtime import compile_to_source
 
 
 def py(source: str) -> str:
@@ -90,13 +90,13 @@ class TestPythonBackend:
 
     def test_cyber_scan_imports(self):
         code = py('escanea target "127.0.0.1" en ports [22, 80]\n')
-        assert "_hado_scan" in code
-        assert "from hado.cybersec.scanner import scan as _hado_scan" in code
+        assert "_habla_scan" in code
+        assert "from habla.cybersec.scanner import scan as _habla_scan" in code
         assert is_valid_python(code)
 
     def test_cyber_recon(self):
         code = py('busca subdomains de "example.com"\n')
-        assert "_hado_find_subdomains" in code
+        assert "_habla_find_subdomains" in code
         assert is_valid_python(code)
 
     def test_pipe_chain(self):
@@ -121,7 +121,7 @@ class TestPythonBackend:
 
     def test_complete_program(self):
         source = """
-nombre = "Hado"
+nombre = "Habla"
 version = 1
 muestra "Lenguaje: " + nombre
 si version >= 1
@@ -149,7 +149,7 @@ class TestCBackend:
     def test_cyber_scan_includes(self):
         code = c('escanea target "127.0.0.1" en ports [22, 80]\n')
         assert "#include <sys/socket.h>" in code
-        assert "hado_scan_port" in code
+        assert "habla_scan_port" in code
 
     def test_if_statement(self):
         code = c("si x > 0\n  muestra x\n")
@@ -249,28 +249,26 @@ class TestGoBackend:
         code = go('muestra "test"')
         assert "func main()" in code
 
-    def test_cyber_scan_generates_real_code(self):
-        # Fase 4: ya no genera stub — genera codigo real con goroutines
+    def test_cyber_scan_generates_stub(self):
         code = go('escanea target "127.0.0.1" en ports [22, 80]\n')
-        assert "hado_scan(" in code
-        assert "func hado_scan(" in code
-        assert "sync.WaitGroup" in code
+        # El stub debe contener comentarios orientativos
+        assert "nmap" in code or "TODO" in code or "Go v0.3" in code
 
     def test_logical_operators_go(self):
         code = go("si x > 0 y y < 10\n  muestra x\n")
         assert "&&" in code
 
     def test_targets_registry(self):
-        from hado.backends import TARGETS
+        from habla.backends import TARGETS
         assert "python" in TARGETS
         assert "go" in TARGETS
         assert "rust" in TARGETS
         assert "c" in TARGETS
-        assert TARGETS["go"]["status"] == "funcional"
+        assert TARGETS["go"]["status"] == "stub"
         assert TARGETS["python"]["status"] == "funcional"
 
     def test_base_backend_interface(self):
-        from hado.backends.base import HadoBackend, list_backends
+        from habla.backends.base import HablaBackend, list_backends
         backends = list_backends()
         assert "go" in backends
         assert "python" in backends

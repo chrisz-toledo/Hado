@@ -1,9 +1,9 @@
-"""Tests para el parser de Hado."""
+"""Tests para el parser de Habla."""
 
 import pytest
-from hado.lexer import Lexer
-from hado.parser import Parser
-from hado.ast_nodes import *
+from habla.lexer import Lexer
+from habla.parser import Parser
+from habla.ast_nodes import *
 
 
 def parse(source: str) -> Program:
@@ -110,12 +110,12 @@ def test_list_literal():
 
 
 def test_binary_ops():
-    for op_hado, op_py in [("y", "y"), ("o", "o"), ("es", "es")]:
-        source = f"resultado = a {op_hado} b\n"
+    for op_habla, op_py in [("y", "y"), ("o", "o"), ("es", "es")]:
+        source = f"resultado = a {op_habla} b\n"
         ast = parse(source)
         stmt = ast.statements[0]
         assert isinstance(stmt.value, BinaryOp)
-        assert stmt.value.op == op_hado
+        assert stmt.value.op == op_habla
 
 
 def test_return_statement():

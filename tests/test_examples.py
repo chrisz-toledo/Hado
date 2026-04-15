@@ -2,7 +2,7 @@
 
 import pytest
 from pathlib import Path
-from hado.runtime import compile_to_source
+from habla.runtime import compile_to_source
 import ast as pyast
 
 
@@ -10,7 +10,7 @@ EXAMPLES_DIR = Path(__file__).parent.parent / "examples"
 
 
 def get_example_files():
-    return sorted(EXAMPLES_DIR.glob("*.ho"))
+    return sorted(EXAMPLES_DIR.glob("*.habla"))
 
 
 @pytest.mark.parametrize("example_path", get_example_files(), ids=lambda p: p.name)
@@ -49,7 +49,7 @@ def test_example_compiles_to_rust(example_path):
 
 def test_hola_mundo_runs():
     """El programa hola-mundo debe ejecutarse y producir output."""
-    example = EXAMPLES_DIR / "01-hola-mundo.ho"
+    example = EXAMPLES_DIR / "01-hola-mundo.habla"
     if not example.exists():
         pytest.skip("Ejemplo no encontrado")
 
@@ -60,10 +60,10 @@ def test_hola_mundo_runs():
     captured = io.StringIO()
     sys.stdout = captured
     try:
-        from hado.runtime import run_source
-        run_source(source, filename="01-hola-mundo.ho")
+        from habla.runtime import run_source
+        run_source(source, filename="01-hola-mundo.habla")
     finally:
         sys.stdout = sys.__stdout__
 
     output = captured.getvalue()
-    assert "Hado" in output or "Bienvenido" in output or "mundo" in output
+    assert "Habla" in output or "Bienvenido" in output or "mundo" in output

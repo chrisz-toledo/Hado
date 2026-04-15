@@ -115,8 +115,8 @@ class Parser:
         if tok.type == TokenType.KEYWORD and tok.value in ("para", "cada"):
             return self.parse_for()
 
-        # devuelve / retorna
-        if tok.type == TokenType.KEYWORD and tok.value in ("devuelve", "retorna"):
+        # devuelve
+        if tok.type == TokenType.KEYWORD and tok.value == "devuelve":
             self.consume()
             val = self.parse_expr()
             self._consume_newline()
@@ -253,8 +253,6 @@ class Parser:
             while self.match(TokenType.IDENTIFIER, TokenType.KEYWORD) and not self.match(TokenType.NEWLINE):
                 params.append(self.consume().value)
 
-        if self.match(TokenType.COLON):
-            self.consume()
         self.skip_newlines()
         body = self.parse_block()
         return FunctionDef(name=name, params=params, body=body, line=line)
@@ -263,9 +261,6 @@ class Parser:
         line = self.current().line
         self.expect(TokenType.KEYWORD, "si")
         cond = self.parse_expr()
-        # Consume optional ':' before block
-        if self.match(TokenType.COLON):
-            self.consume()
         self.skip_newlines()
         then_body = self.parse_block()
 
@@ -273,8 +268,6 @@ class Parser:
         else_body = []
         if self.match(TokenType.KEYWORD) and self.current().value == "sino":
             self.consume()
-            if self.match(TokenType.COLON):
-                self.consume()
             self.skip_newlines()
             else_body = self.parse_block()
 
@@ -284,8 +277,6 @@ class Parser:
         line = self.current().line
         self.expect(TokenType.KEYWORD, "mientras")
         cond = self.parse_expr()
-        if self.match(TokenType.COLON):
-            self.consume()
         self.skip_newlines()
         body = self.parse_block()
         return WhileStatement(condition=cond, body=body, line=line)
@@ -308,8 +299,6 @@ class Parser:
         if self.match_value("en", "in"):
             self.consume()
         iterable = self.parse_expr()
-        if self.match(TokenType.COLON):
-            self.consume()
         self.skip_newlines()
         body = self.parse_block()
         return ForStatement(var=var, iterable=iterable, body=body, line=line)
@@ -349,26 +338,17 @@ class Parser:
         line = self.current().line
         self.expect(TokenType.KEYWORD, "escanea")
 
-        _DEFAULT_PORTS = [
-            NumberLiteral(value=p, line=line)
-            for p in [21, 22, 23, 25, 80, 443, 3306, 5432, 8080, 8443]
-        ]
-
-        # Caso 0: escanea en TARGET  →  scan con ports por defecto
-        if self.current().value == "en" and self.peek().value not in ("ports",):
-            self.consume()  # en
-            target = self.parse_primary()
-            self._consume_newline()
-            node = CyberScan(target=target, ports=_DEFAULT_PORTS, line=line)
-            return ExpressionStatement(expr=node, line=line)
-
         # Caso 1: escanea ports de target  →  scan con ports por defecto
         if self.current().value == "ports" and self.peek().value == "de":
             self.consume()  # ports
             self.consume()  # de
             target = self.parse_primary()
+            default_ports = [
+                NumberLiteral(value=p, line=line)
+                for p in [21, 22, 23, 25, 80, 443, 3306, 5432, 8080, 8443]
+            ]
             self._consume_newline()
-            node = CyberScan(target=target, ports=_DEFAULT_PORTS, line=line)
+            node = CyberScan(target=target, ports=default_ports, line=line)
             return ExpressionStatement(expr=node, line=line)
 
         # Caso 2: escanea target "ip" en ports [22, 80]
@@ -558,20 +538,6 @@ class Parser:
     def parse_pipe_or_binary(self) -> Node:
         left = self.parse_binary()
 
-        # Ternario: value si condition sino alternative
-        if self.match(TokenType.KEYWORD) and self.current().value == "si":
-            self.consume()
-            cond = self.parse_binary()
-            if self.match(TokenType.KEYWORD) and self.current().value == "sino":
-                self.consume()
-                alt = self.parse_binary()
-                return TernaryExpression(value=left, condition=cond, alternative=alt, line=left.line)
-            # Si no hay 'sino', no era ternario — error graceful
-            raise ParseError(
-                fmt("unexpected_token", token="si", line=left.line, suggestion="falta 'sino' en expresion ternaria"),
-                left.line, 0, self.filename,
-            )
-
         if self.match(TokenType.PIPE):
             steps = [left]
             while self.match(TokenType.PIPE):
@@ -672,20 +638,6 @@ class Parser:
     def parse_cyber_scan_inline(self) -> CyberScan:
         line = self.current().line
         self.expect(TokenType.KEYWORD, "escanea")
-        _default = [
-            NumberLiteral(value=p, line=line)
-            for p in [21, 22, 23, 25, 80, 443, 3306, 5432, 8080, 8443]
-        ]
-        # escanea en TARGET  →  default ports
-        if self.match_value("en") and self.peek().value not in ("ports",):
-            self.consume()  # en
-            target = self.parse_primary()
-            return CyberScan(target=target, ports=_default, line=line)
-        # escanea ports de TARGET  →  default ports
-        if self.match_value("ports") and self.peek().value == "de":
-            self.consume(); self.consume()
-            target = self.parse_primary()
-            return CyberScan(target=target, ports=_default, line=line)
         if self.match_value("target") and self.peek().type == TokenType.STRING:
             self.consume()
         target = self.parse_primary()
@@ -697,8 +649,6 @@ class Parser:
             if self.match(TokenType.LBRACKET):
                 ports_list = self.parse_list_literal()
                 ports = ports_list.elements
-            else:
-                ports = _default
         return CyberScan(target=target, ports=ports, line=line)
 
     def parse_busca_inline(self) -> Node:
