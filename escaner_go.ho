@@ -1,4 +1,0 @@
-muestra "=== INICIANDO ESCANEO EN GO ==="
-objetivo = "scanme.nmap.org"
-resultado = escanea objetivo en ports [80, 443, 22, 3306, 8080]
-muestra resultado

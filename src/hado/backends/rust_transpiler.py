@@ -1,75 +1,134 @@
 """
-Hado DSL — Backend Rust.
-Genera codigo Rust 2021 edition a partir del AST de Hado.
+Hado DSL — Backend Rust (Tokio async edition).
 
-Cargo.toml requerido para codigo generado que usa HTTP:
-  [dependencies]
-  reqwest = { version = "0.11", features = ["blocking", "json"] }
+Genera código Rust 2021 edition con async/await y tokio runtime.
+Cada módulo de ciberseguridad emite código idiomático real.
+
+Uso desde CLI:
+    hado compile script.ho --target rust          # imprime main.rs en stdout
+    hado compile script.ho --target rust --out dir # genera src/main.rs + Cargo.toml
+
+Cargo.toml generado automáticamente con las dependencias que usa el código.
 """
 
 from __future__ import annotations
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Dict, Tuple
 
 from ..transpiler import BaseTranspiler
 from ..ast_nodes import *
 
 
+# ─── Dependencias conocidas ──────────────────────────────────────────────────
+
+_CARGO_DEPS: Dict[str, str] = {
+    "tokio":        'tokio = { version = "1", features = ["full"] }',
+    "reqwest":      'reqwest = { version = "0.12", features = ["json"] }',
+    "serde":        'serde = { version = "1", features = ["derive"] }',
+    "serde_json":   'serde_json = "1"',
+    "anyhow":       'anyhow = "1"',
+    "futures":      'futures = "0.3"',
+    "clap":         'clap = { version = "4", features = ["derive"] }',
+    "tokio-stream": 'tokio-stream = "0.1"',
+}
+
+
 class RustTranspiler(BaseTranspiler):
     """
-    Genera codigo Rust 2021 edition.
+    Genera código Rust 2021 edition con async/await y tokio runtime.
 
-    El codigo generado se envuelve en fn main() si no hay una fn main definida.
-    Variables son let (inmutables) por defecto; el transpiler usa let mut
-    cuando detecta reasignacion (simplificacion: siempre usa let mut para
-    variables que podrian reasignarse).
+    Características:
+    - main() es siempre async con #[tokio::main]
+    - CyberScan usa tokio::net::TcpStream para escaneo concurrente
+    - CyberRecon usa tokio::net::lookup_host para DNS async
+    - HttpGet usa reqwest async client
+    - Cargo.toml generado automáticamente con las deps reales
+    - emit()         → main.rs listo para pegar
+    - emit_project() → (main_rs, cargo_toml) para proyecto Cargo completo
     """
 
-    def __init__(self, ast: Program):
+    def __init__(self, ast: Program, crate_name: str = "hado_generated"):
         super().__init__(ast)
-        self._has_main = False
-        self._uses: Set[str] = set()
-        self._uses_result = False  # si main debe retornar Result
+        self._crate_name = crate_name
+        self._has_async = False
+        self._cargo_deps: Set[str] = set()
+        self._top_level: List[str] = []  # funciones helper al top-level
+
+    # ─── Entry points ─────────────────────────────────────────────────────────
 
     def emit(self) -> str:
+        """Retorna el contenido de main.rs completo."""
+        main_rs, _ = self.emit_project()
+        return main_rs
+
+    def emit_project(self) -> Tuple[str, str]:
+        """
+        Retorna (main_rs, cargo_toml).
+        main_rs  → contenido de src/main.rs
+        cargo_toml → contenido de Cargo.toml
+        """
         body_lines = self._visit_program(self.ast)
-        body = "\n".join(body_lines)
 
-        # Construir use statements
-        use_lines = sorted(f"use {u};" for u in self._uses)
-        uses = "\n".join(use_lines)
+        # Construir función main
+        main_body = "\n".join(body_lines)
+        if not main_body.strip():
+            main_body = "    // programa vacío"
 
-        # Cargo.toml hint como comentario
-        cargo_hint = self._emit_cargo_hint()
+        self._cargo_deps.add("anyhow")
 
-        if self._has_main:
-            return f"{cargo_hint}{uses}\n\n{body}" if uses else f"{cargo_hint}{body}"
-
-        # Envolver en main
-        indent = "    "
-        indented_body = "\n".join(indent + line if line else "" for line in body.splitlines())
-
-        if self._uses_result:
-            main_sig = "fn main() -> Result<(), Box<dyn std::error::Error>>"
-            main_end = "    Ok(())\n}"
+        if self._has_async:
+            self._cargo_deps.add("tokio")
+            main_fn = (
+                "#[tokio::main]\n"
+                "async fn main() -> anyhow::Result<()> {\n"
+                f"{main_body}\n"
+                "    Ok(())\n"
+                "}"
+            )
         else:
-            main_sig = "fn main()"
-            main_end = "}"
+            main_fn = (
+                "fn main() -> anyhow::Result<()> {\n"
+                f"{main_body}\n"
+                "    Ok(())\n"
+                "}"
+            )
 
-        header = f"{cargo_hint}{uses}\n\n" if uses else f"{cargo_hint}"
-        return f"{header}{main_sig} {{\n{indented_body}\n{main_end}"
+        # Ensamblar main.rs
+        parts = [
+            "// Generado por Hado DSL — https://github.com/hado-lang/hado",
+            "// Compilar: cargo build --release",
+            "// Ejecutar: cargo run",
+            "",
+        ]
+        if self._top_level:
+            parts.extend(self._top_level)
+            parts.append("")
+        parts.append(main_fn)
 
-    def _emit_cargo_hint(self) -> str:
-        if "reqwest::blocking" not in self._uses and "reqwest" not in str(self._uses):
-            return ""
-        return """\
-// Cargo.toml requerido:
-// [dependencies]
-// reqwest = { version = "0.11", features = ["blocking", "json"] }
-// serde_json = "1"
+        main_rs = "\n".join(parts)
+        cargo_toml = self._build_cargo_toml()
+        return main_rs, cargo_toml
 
-"""
+    # ─── Cargo.toml ──────────────────────────────────────────────────────────
 
-    # ─── Visitors ────────────────────────────────────────────────────────────
+    def _build_cargo_toml(self) -> str:
+        dep_lines = []
+        for dep_name in sorted(self._cargo_deps):
+            if dep_name in _CARGO_DEPS:
+                dep_lines.append(_CARGO_DEPS[dep_name])
+            else:
+                dep_lines.append(f'{dep_name} = "*"')
+        deps_section = "\n".join(dep_lines)
+        return (
+            f"[package]\n"
+            f'name = "{self._crate_name}"\n'
+            f'version = "0.1.0"\n'
+            f'edition = "2021"\n'
+            f"\n"
+            f"[dependencies]\n"
+            f"{deps_section}\n"
+        )
+
+    # ─── Visitor dispatch ────────────────────────────────────────────────────
 
     def _visit(self, node: Node) -> str:
         method = f"_visit_{type(node).__name__}"
@@ -83,143 +142,188 @@ class RustTranspiler(BaseTranspiler):
         lines = []
         for stmt in node.statements:
             result = self._visit(stmt)
-            if result:
+            if isinstance(result, list):
+                lines.extend(result)
+            elif result:
                 lines.append(result)
         return lines
-
-    def _ind(self) -> str:
-        base = "" if self._has_main else "    "
-        return base + "    " * self._indent
 
     # ─── Statements ──────────────────────────────────────────────────────────
 
     def _visit_Assignment(self, node: Assignment) -> str:
-        value = self._visit(node.value) if node.value else "None"
-        return f"{self._ind()}let mut {node.name} = {value};"
+        val = self._visit(node.value)
+        return f"{self._ind()}let mut {node.name} = {val};"
 
     def _visit_ShowStatement(self, node: ShowStatement) -> str:
-        if node.values:
-            fmt_str = " ".join("{}" for _ in node.values)
-            args = ", ".join(self._visit(v) for v in node.values)
-            return f'{self._ind()}println!("{fmt_str}", {args});'
-        val = self._visit(node.value) if node.value is not None else "_pipe_input"
-        return f'{self._ind()}println!("{{}}", {val});'
+        val = self._visit(node.value)
+        if isinstance(node.value, StringLiteral):
+            inner = node.value.value[1:-1]
+            return f'{self._ind()}println!("{inner}");'
+        return f"{self._ind()}println!(\"{{:?}}\", {val});"
 
     def _visit_IfStatement(self, node: IfStatement) -> str:
+        lines = []
         cond = self._visit(node.condition)
-        lines = [f"{self._ind()}if {cond} {{"]
+        lines.append(f"{self._ind()}if {cond} {{")
         self._indent += 1
         for stmt in node.then_body:
-            lines.append(self._visit(stmt))
+            r = self._visit(stmt)
+            if isinstance(r, list):
+                lines.extend(r)
+            elif r:
+                lines.append(r)
         self._indent -= 1
         if node.else_body:
             lines.append(f"{self._ind()}}} else {{")
             self._indent += 1
             for stmt in node.else_body:
-                lines.append(self._visit(stmt))
+                r = self._visit(stmt)
+                if isinstance(r, list):
+                    lines.extend(r)
+                elif r:
+                    lines.append(r)
             self._indent -= 1
         lines.append(f"{self._ind()}}}")
         return "\n".join(lines)
 
     def _visit_WhileStatement(self, node: WhileStatement) -> str:
+        lines = []
         cond = self._visit(node.condition)
-        lines = [f"{self._ind()}while {cond} {{"]
+        lines.append(f"{self._ind()}while {cond} {{")
         self._indent += 1
         for stmt in node.body:
-            lines.append(self._visit(stmt))
+            r = self._visit(stmt)
+            if isinstance(r, list):
+                lines.extend(r)
+            elif r:
+                lines.append(r)
         self._indent -= 1
         lines.append(f"{self._ind()}}}")
         return "\n".join(lines)
 
-    def _visit_ForStatement(self, node: ForStatement) -> str:
+    def _visit_ForStatement(self, node: ForStatement) -> List[str]:
+        lines = []
         iterable = self._visit(node.iterable)
-        lines = [f"{self._ind()}for {node.var} in {iterable}.iter() {{"]
+        lines.append(f"{self._ind()}for {node.var} in {iterable} {{")
         self._indent += 1
         for stmt in node.body:
-            lines.append(self._visit(stmt))
+            r = self._visit(stmt)
+            if isinstance(r, list):
+                lines.extend(r)
+            elif r:
+                lines.append(r)
         self._indent -= 1
         lines.append(f"{self._ind()}}}")
-        return "\n".join(lines)
+        return lines
 
-    def _visit_FunctionDef(self, node: FunctionDef) -> str:
-        if node.name == "main":
-            self._has_main = True
-            lines = ["fn main() {"]
-        else:
-            params = ", ".join(f"{p}: &str" for p in node.params)
-            lines = [f"{self._ind()}fn {node.name}({params}) {{"]
+    def _visit_FunctionDef(self, node: FunctionDef) -> List[str]:
+        params = ", ".join(f"{p}: &str" for p in node.params)
+        lines = [f"{self._ind()}fn {node.name}({params}) {{"]
         self._indent += 1
         for stmt in node.body:
-            lines.append(self._visit(stmt))
+            r = self._visit(stmt)
+            if isinstance(r, list):
+                lines.extend(r)
+            elif r:
+                lines.append(r)
         self._indent -= 1
         lines.append(f"{self._ind()}}}")
-        return "\n".join(lines)
+        return lines
 
     def _visit_ReturnStatement(self, node: ReturnStatement) -> str:
         val = self._visit(node.value) if node.value else ""
-        return f"{self._ind()}return {val};".rstrip() + ";"
+        return (f"{self._ind()}return {val};").rstrip() + ";"
 
     def _visit_ExpressionStatement(self, node: ExpressionStatement) -> str:
         if isinstance(node.expr, PipeExpression):
             return self._emit_pipe_chain(node.expr.steps)
         return f"{self._ind()}{self._visit(node.expr)};"
 
-    # ─── Cyber ────────────────────────────────────────────────────────────────
+    def _visit_SaveStatement(self, node: SaveStatement) -> str:
+        val = self._visit(node.value) if node.value else "_data"
+        fname = self._visit(node.filename) if node.filename else '"output.txt"'
+        return f"{self._ind()}std::fs::write({fname}, format!(\"{{:?}}\", {val}))?;"
+
+    # ─── Cyber — Port Scanner (async Tokio) ──────────────────────────────────
 
     def _visit_CyberScan(self, node: CyberScan) -> str:
-        self._uses.add("std::net::TcpStream")
-        self._uses.add("std::time::Duration")
+        """
+        Port scanner async con tokio::net::TcpStream y futures::join_all.
+        Lanza todas las conexiones concurrentemente, timeout de 1 segundo.
+        """
+        self._has_async = True
+        self._cargo_deps.update({"tokio", "futures", "anyhow"})
+
         target = self._visit(node.target) if node.target else '"127.0.0.1"'
-        ports = [self._visit(p) for p in node.ports]
+        ports = [self._visit(p) for p in node.ports] if node.ports else ["80", "443", "22"]
+
+        # Registrar scan_ports() como helper top-level (solo una vez)
+        if not getattr(self, "_scan_ports_registered", False):
+            self._scan_ports_registered = True
+            self._top_level.append(_SCAN_PORTS_FN)
+
+        ports_vec = ", ".join(f"{p}u16" for p in ports)
         lines = [
-            f"{self._ind()}// escanea target {target}",
-            f"{self._ind()}let _ports = vec![{', '.join(ports)}u16];",
-            f"{self._ind()}for _port in &_ports {{",
-            f"{self._ind()}    let _addr = format!(\"{{}}:{{}}\", {target}, _port);",
-            f"{self._ind()}    let _timeout = Duration::from_secs(1);",
-            f"{self._ind()}    match TcpStream::connect_timeout(&_addr.parse().unwrap(), _timeout) {{",
-            f'{self._ind()}        Ok(_) => println!("Port {{}}: open", _port),',
-            f'{self._ind()}        Err(_) => println!("Port {{}}: closed", _port),',
-            f"{self._ind()}    }}",
+            f"{self._ind()}// escanea {target}",
+            f"{self._ind()}let _ports: Vec<u16> = vec![{ports_vec}];",
+            f"{self._ind()}let scan_results = scan_ports({target}, &_ports).await;",
+            f"{self._ind()}for (port, open) in &scan_results {{",
+            f'{self._ind()}    let status = if *open {{ "open" }} else {{ "closed" }};',
+            f'{self._ind()}    println!("  {{}}:{{}}: {{}}", {target}, port, status);',
             f"{self._ind()}}}",
         ]
         return "\n".join(lines)
 
-    def _visit_HttpGet(self, node: HttpGet) -> str:
-        self._uses.add("reqwest::blocking")
-        self._uses_result = True
-        url = self._visit(node.url) if node.url else '""'
-        return f"{self._ind()}let _response = reqwest::blocking::get({url})?.text()?;"
+    # ─── Cyber — Recon (async DNS) ────────────────────────────────────────────
 
     def _visit_CyberRecon(self, node: CyberRecon) -> str:
-        self._uses.add("std::net::ToSocketAddrs")
-        domain = self._visit(node.domain) if node.domain else '""'
-        prefixes = ["www", "mail", "api", "dev", "admin", "test"]
+        self._has_async = True
+        self._cargo_deps.update({"tokio", "futures", "anyhow"})
+
+        domain = self._visit(node.domain) if node.domain else '"example.com"'
+
+        if not getattr(self, "_recon_registered", False):
+            self._recon_registered = True
+            self._top_level.append(_FIND_SUBDOMAINS_FN)
+
         lines = [
             f"{self._ind()}// busca subdomains de {domain}",
-            f'{self._ind()}let _prefixes = vec![{", ".join(repr(p) for p in prefixes)}];',
-            f"{self._ind()}let mut _subdomains: Vec<String> = Vec::new();",
-            f"{self._ind()}for _prefix in &_prefixes {{",
-            f"{self._ind()}    let _fqdn = format!(\"{{}}.{{}}\", _prefix, {domain});",
-            f'{self._ind()}    if (_fqdn.clone() + ":80").to_socket_addrs().is_ok() {{',
-            f"{self._ind()}        _subdomains.push(_fqdn);",
-            f"{self._ind()}    }}",
+            f"{self._ind()}let subdomains = find_subdomains({domain}).await;",
+            f'{self._ind()}println!("Subdominios encontrados: {{}}", subdomains.len());',
+            f"{self._ind()}for sub in &subdomains {{",
+            f'{self._ind()}    println!("  + {{}}", sub);',
             f"{self._ind()}}}",
         ]
         return "\n".join(lines)
+
+    # ─── Cyber — HTTP ─────────────────────────────────────────────────────────
+
+    def _visit_HttpGet(self, node: HttpGet) -> str:
+        self._has_async = True
+        self._cargo_deps.update({"tokio", "reqwest", "anyhow"})
+        url = self._visit(node.url) if node.url else '""'
+        return (
+            f"{self._ind()}let _response = reqwest::get({url}).await?;\n"
+            f"{self._ind()}let _body = _response.text().await?;"
+        )
+
+    # ─── Cyber — Report ───────────────────────────────────────────────────────
 
     def _visit_GenerateReport(self, node: GenerateReport) -> str:
         data = self._visit(node.data) if node.data else "_data"
-        return f'{self._ind()}println!("=== Reporte ===\\n{{:#?}}", {data});'
+        return f'{self._ind()}println!("=== Reporte Hado ===\\n{{:#?}}", {data});'
 
     # ─── Expresiones ─────────────────────────────────────────────────────────
 
     def _visit_BinaryOp(self, node: BinaryOp) -> str:
         left = self._visit(node.left)
         right = self._visit(node.right)
-        op_map = {"y": "&&", "o": "||", "no": "!", "es": "==", "==": "==",
-                  "!=": "!=", ">=": ">=", "<=": "<=", ">": ">", "<": "<",
-                  "+": "+", "-": "-", "*": "*", "/": "/", "%": "%"}
+        op_map = {
+            "y": "&&", "o": "||", "no": "!", "es": "==",
+            "==": "==", "!=": "!=", ">=": ">=", "<=": "<=",
+            ">": ">", "<": "<",
+            "+": "+", "-": "-", "*": "*", "/": "/", "%": "%",
+        }
         op = op_map.get(node.op, node.op)
         return f"({left} {op} {right})"
 
@@ -252,10 +356,17 @@ class RustTranspiler(BaseTranspiler):
         obj = self._visit(node.obj)
         return f'{obj}["{node.prop}"]'
 
+    def _visit_FunctionCall(self, node: FunctionCall) -> str:
+        args = ", ".join(self._visit(a) for a in node.args)
+        return f"{node.func}({args})"
+
     def _visit_FilterExpression(self, node: FilterExpression) -> str:
         cond = self._visit(node.condition)
         src = self._visit(node.iterable) if node.iterable else "_pipe_input"
-        return f"{src}.iter().filter(|{node.var}| {cond}).cloned().collect::<Vec<_>>()"
+        return (
+            f"{src}.iter().filter(|{node.var}| {cond})"
+            ".cloned().collect::<Vec<_>>()"
+        )
 
     def _visit_CountExpression(self, node: CountExpression) -> str:
         src = self._visit(node.source) if node.source else "_pipe_input"
@@ -276,7 +387,11 @@ class RustTranspiler(BaseTranspiler):
                     continue
                 else:
                     out_var = target_var if is_last else self._next_pipe_var()
-                    lines.append(f"{self._ind()}let mut {out_var} = {self._visit(step)};")
+                    r = self._visit(step)
+                    if isinstance(r, list):
+                        lines.extend(r)
+                    else:
+                        lines.append(f"{self._ind()}let mut {out_var} = {r};")
                     prev_var = out_var
                     continue
 
@@ -293,16 +408,83 @@ class RustTranspiler(BaseTranspiler):
         if isinstance(step, FilterExpression):
             cond = self._visit(step.condition)
             v = step.var
-            return f"{ind}let mut {out_var} = {prev_var}.iter().filter(|{v}| {cond}).cloned().collect::<Vec<_>>();"
+            return (
+                f"{ind}let mut {out_var} = "
+                f"{prev_var}.iter().filter(|{v}| {cond}).cloned().collect::<Vec<_>>();"
+            )
         elif isinstance(step, ShowStatement):
-            return f'{ind}println!("{{}}", {prev_var});'
+            return f'{ind}println!("{{:?}}", {prev_var});'
         elif isinstance(step, SaveStatement):
             fname = self._visit(step.filename) if step.filename else '"output.txt"'
-            self._uses.add("std::fs")
-            return f"{ind}std::fs::write({fname}, format!(\"{{}}\", {prev_var}))?;"
+            return f"{ind}std::fs::write({fname}, format!(\"{{:?}}\", {prev_var}))?;"
         elif isinstance(step, CountExpression):
             return f"{ind}let mut {out_var} = {prev_var}.len();"
         elif isinstance(step, GenerateReport):
             return f'{ind}println!("=== Reporte ===\\n{{:#?}}", {prev_var});'
         else:
-            return f"{ind}let mut {out_var} = {self._visit(step)};"
+            r = self._visit(step)
+            return f"{ind}let mut {out_var} = {r};"
+
+
+# ─── Funciones helper generadas (top-level en main.rs) ──────────────────────
+
+_SCAN_PORTS_FN = '''\
+/// Escanea una lista de puertos de forma concurrente usando tokio.
+/// Retorna Vec<(u16, bool)> donde bool = true si el puerto está abierto.
+async fn scan_ports(host: &str, ports: &[u16]) -> Vec<(u16, bool)> {
+    use futures::future::join_all;
+    use tokio::net::TcpStream;
+    use tokio::time::{timeout, Duration};
+
+    let tasks: Vec<_> = ports
+        .iter()
+        .map(|&port| {
+            let addr = format!("{}:{}", host, port);
+            async move {
+                let is_open = timeout(
+                    Duration::from_secs(1),
+                    TcpStream::connect(&addr),
+                )
+                .await
+                .map(|r| r.is_ok())
+                .unwrap_or(false);
+                (port, is_open)
+            }
+        })
+        .collect();
+
+    join_all(tasks).await
+}'''
+
+_FIND_SUBDOMAINS_FN = '''\
+/// Enumera subdominios del dominio dado mediante resolución DNS async.
+async fn find_subdomains(domain: &str) -> Vec<String> {
+    use futures::future::join_all;
+    use tokio::net::lookup_host;
+
+    let prefixes = [
+        "www", "mail", "api", "dev", "admin",
+        "test", "staging", "vpn", "ftp", "git",
+    ];
+
+    let tasks: Vec<_> = prefixes
+        .iter()
+        .map(|prefix| {
+            let fqdn = format!("{}.{}", prefix, domain);
+            async move {
+                let query = format!("{}:80", fqdn);
+                if lookup_host(&query).await.is_ok() {
+                    Some(fqdn)
+                } else {
+                    None
+                }
+            }
+        })
+        .collect();
+
+    join_all(tasks)
+        .await
+        .into_iter()
+        .flatten()
+        .collect()
+}'''

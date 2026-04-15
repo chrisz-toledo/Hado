@@ -3,13 +3,25 @@ Hado DSL — Lexer / Tokenizador.
 
 Convierte codigo fuente Hado en una secuencia de tokens.
 Maneja INDENT/DEDENT basado en indentacion (estilo Python).
+
+Robustez v0.5:
+  - Acepta comillas simples Y dobles para strings (normaliza a doble)
+  - Descarte silencioso de artefactos de terminal / clipboard de macOS:
+      * Bracketed paste: ESC[200~ / ESC[201~
+      * Secuencias ANSI: ESC[...m
+      * Caracteres no imprimibles (0x00-0x08, 0x0b-0x0c, 0x0e-0x1f, 0x7f)
+      * Retornos de carro \\r (Windows)
+      * UTF-8 BOM (\\ufeff), zero-width spaces (\\u200b-\\u200d)
+  - En modo estricto=False (default): UNKNOWN emite advertencia sin abortar
+  - En modo estricto=True: comportamiento original (raise LexerError)
 """
 
 from __future__ import annotations
 import re
-from dataclasses import dataclass
+import warnings
+from dataclasses import dataclass, field
 from enum import Enum, auto
-from typing import List
+from typing import List, Optional
 
 from .errors import LexerError, fmt
 
@@ -75,6 +87,51 @@ class Token:
         return f"Token({self.type.name}, {self.value!r}, {self.line}:{self.col})"
 
 
+# ─── Pre-proceso: limpiar artefactos de terminal antes de tokenizar ──────────
+
+# Bracketed paste sequences (macOS Terminal, iTerm2, etc.)
+_BRACKETED_PASTE_RE = re.compile(r'\x1b\[200~.*?\x1b\[201~', re.DOTALL)
+# ANSI escape sequences (colores, movimiento de cursor, etc.)
+_ANSI_ESCAPE_RE = re.compile(r'\x1b(\[[\d;]*[A-Za-z]|[0-9A-Za-z])', re.DOTALL)
+# UTF-8 BOM + zero-width spaces + non-printable ASCII control chars
+# Incluye: \x00-\x08 (control), \x0b (VT), \x0c (FF), \x0e-\x1f (control),
+#          \x7f (DEL), \r (carriage return), \ufeff (BOM), \u200b-\u200d (ZWS)
+_INVISIBLE_RE = re.compile(
+    r'[\x00-\x08\x0b\x0c\x0e-\x1f\x7f\r\ufeff\u200b\u200c\u200d]'
+)
+
+
+def clean_source(source: str) -> tuple[str, list[str]]:
+    """
+    Limpia el código fuente de artefactos invisibles antes del lexing.
+
+    Returns:
+        (cleaned_source, list_of_warnings)
+        Los warnings son descripciones de lo que fue eliminado.
+    """
+    warns = []
+
+    # 1. Eliminar bracketed paste sequences completas
+    cleaned, n = _BRACKETED_PASTE_RE.subn('', source)
+    if n:
+        warns.append(f"Se descartaron {n} secuencia(s) de bracketed-paste (ESC[200~/ESC[201~)")
+        source = cleaned
+
+    # 2. Eliminar secuencias ANSI de escape
+    cleaned, n = _ANSI_ESCAPE_RE.subn('', source)
+    if n:
+        warns.append(f"Se descartaron {n} secuencia(s) ANSI de terminal")
+        source = cleaned
+
+    # 3. Eliminar caracteres no imprimibles (pero preservar \t y \n)
+    cleaned, n = _INVISIBLE_RE.subn('', source)
+    if n:
+        warns.append(f"Se descartaron {n} carácter(es) no imprimible(s)/invisible(s)")
+        source = cleaned
+
+    return source, warns
+
+
 # ─── Patrones del lexer ───────────────────────────────────────────────────────
 
 # Orden importa: PIPE antes de OPERATOR, FLOAT antes de INT, etc.
@@ -127,9 +184,22 @@ _SKIP_GROUPS = frozenset({"WHITESPACE", "COMMENT", "HASH_COMMENT"})
 
 
 class Lexer:
-    def __init__(self, source: str, filename: str = "<input>"):
-        self.source = source
+    def __init__(self, source: str, filename: str = "<input>", strict: bool = False):
+        """
+        Args:
+            source:   código fuente Hado
+            filename: nombre del archivo (para mensajes de error)
+            strict:   True = abortar en caracteres desconocidos (v0.1 behavior)
+                      False = emitir advertencia y continuar (default desde v0.5)
+        """
+        # Limpiar artefactos invisibles antes de tokenizar
+        self.source, self._clean_warnings = clean_source(source)
         self.filename = filename
+        self.strict = strict
+
+    def get_warnings(self) -> List[str]:
+        """Retorna advertencias acumuladas (artefactos descartados, etc.)."""
+        return list(self._clean_warnings)
 
     def tokenize(self) -> List[Token]:
         lines = self.source.split("\n")
@@ -192,10 +262,18 @@ class Lexer:
             if group in _SKIP_GROUPS:
                 continue
             if group == "UNKNOWN":
-                raise LexerError(
-                    fmt("invalid_char", char=value, line=line_num),
-                    line=line_num, col=col, filename=self.filename,
-                )
+                if self.strict:
+                    raise LexerError(
+                        fmt("invalid_char", char=value, line=line_num),
+                        line=line_num, col=col, filename=self.filename,
+                    )
+                else:
+                    # Modo tolerante: descarte silencioso con advertencia
+                    char_repr = repr(value)
+                    self._clean_warnings.append(
+                        f"Línea {line_num}:{col} — carácter desconocido ignorado: {char_repr}"
+                    )
+                    continue
 
             token_type = self._classify(group, value)
             # Normalizar strings a double-quote en lex time

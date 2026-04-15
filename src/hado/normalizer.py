@@ -38,12 +38,33 @@ _STRING_PATTERN = re.compile(
 
 
 def normalize(source: str) -> str:
-    """Normaliza diacriticos en codigo Hado, preservando strings literales."""
+    """
+    Normaliza diacriticos en codigo Hado, preservando strings literales.
+    También normaliza variantes de comillas tipográficas a ASCII estándar.
+    """
+    # 1. Normalizar comillas tipográficas a ASCII (frecuentes al copiar de LLMs/web)
+    QUOTE_NORMALIZATIONS = {
+        "\u201c": '"',   # " comilla doble izquierda
+        "\u201d": '"',   # " comilla doble derecha
+        "\u2018": "'",   # ' comilla simple izquierda
+        "\u2019": "'",   # ' comilla simple derecha
+        "\u00ab": '"',   # « guillemet izquierdo
+        "\u00bb": '"',   # » guillemet derecho
+        "\u2039": "'",   # ‹ single guillemet izquierdo
+        "\u203a": "'",   # › single guillemet derecho
+        "\u201e": '"',   # „ comilla baja alemana
+        "\u2026": "...", # … puntos suspensivos
+    }
+    for char, replacement in QUOTE_NORMALIZATIONS.items():
+        source = source.replace(char, replacement)
+
+    # 2. Normalizar diacríticos y caracteres especiales del español
+    #    Solo fuera de string literals
     parts = _STRING_PATTERN.split(source)
     result = []
     for i, part in enumerate(parts):
         if i % 2 == 0:
-            # Segmento de codigo — aplicar normalizaciones
+            # Segmento de código — aplicar normalizaciones
             for char, replacement in NORMALIZATIONS.items():
                 part = part.replace(char, replacement)
         # Segmentos impares son string literals — preservar intactos

@@ -525,10 +525,11 @@ class TestBackendComparison:
         # Compila con gcc/clang sin dependencias externas
 
     def test_scan_rust_real_tcpstream(self):
-        """✅ Rust: genera TcpStream::connect_timeout"""
+        """✅ Rust: genera TcpStream async con Tokio (v0.5+)"""
         code = rust(self.SCAN_CODE)
         assert "TcpStream" in code
-        assert "connect_timeout" in code
+        # v0.5+: usa tokio::time::timeout + TcpStream::connect (no connect_timeout)
+        assert "scan_ports" in code or "connect" in code
 
     def test_headers_python_real(self):
         """✅ Python: llama analyze_headers() real"""
