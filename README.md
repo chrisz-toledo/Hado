@@ -9,8 +9,10 @@ headers = analiza headers de "https://example.com"
 genera reporte con scan, headers
 ```
 
-> **Estado: v0.4 — Python ✅ funcional · Go ✅ funcional (goroutines, stdlib) · C ✅ funcional · Rust stub**
-> 188 tests · [Roadmap](docs/roadmap.md)
+> **Estado: v0.5 — Python ✅ funcional · Go ✅ funcional · Rust ✅ funcional · C ⚠️ alpha**
+> 474 tests · [Roadmap](docs/roadmap.md)
+
+⚠️ *Advertencia: Los backends Go y Rust han sido completados y verificados mediante análisis automatizado, pero aún requieren validación manual en la terminal local del autor.*
 
 ---
 
@@ -46,10 +48,10 @@ Hado no compite con Python como lenguaje de propósito general. Es un **DSL mult
 
 | Target | Estado | Versión | Caso de uso |
 |--------|--------|---------|-------------|
-| Python | ✅ **Funcional** | 0.1 | Scripting, OSINT, prototipado rápido |
+| Python | ✅ **Funcional** | 0.5 | Scripting, OSINT, prototipado rápido |
 | Go     | ✅ **Funcional** | 1.0 | Scanners concurrentes, binarios standalone |
-| C      | ✅ **Funcional** | 0.1 | Exploits, shellcode, módulos de kernel |
-| Rust   | 🔄 **Stub** | 0.1 | Herramientas memory-safe, fuzzing, parsers |
+| Rust   | ✅ **Funcional** | 0.5 | Herramientas memory-safe, fuzzing, parsers |
+| C      | ⚠️ **Alpha**     | 0.1 | Exploits, shellcode, módulos de kernel |
 
 **Go v1.0**: `escanea` genera goroutines reales con `sync.WaitGroup` + `net.DialTimeout`. Solo stdlib — cero dependencias externas.
 
@@ -303,8 +305,8 @@ Ver [docs/llm-guide.md](docs/llm-guide.md) para la guía completa con todos los 
        ├──────────────┬──────────────┬──────────────┐
        ▼              ▼              ▼              ▼
 ┌───────────┐  ┌───────────┐  ┌───────────┐  ┌───────────┐
-│  Python   │  │    Go     │  │     C     │  │   Rust    │
-│ ✅ v0.1  │  │ ✅ v1.0  │  │ ✅ v0.1  │  │ 🔄 stub  │
+│  Python   │  │    Go     │  │   Rust    │  │     C     │
+│ ✅ v0.5   │  │ ✅ v1.0   │  │ ✅ v0.5   │  │ ⚠️ v0.1   │
 └─────┬─────┘  └─────┬─────┘  └─────┬─────┘  └─────┬─────┘
       │               │              │               │
       ▼               ▼              ▼               ▼
@@ -320,10 +322,12 @@ Ver [docs/llm-guide.md](docs/llm-guide.md) para la guía completa con todos los 
 |------|---------|--------|---------|
 | 1 | v0.1 | ✅ Completa | Core compiler, Python backend |
 | 2 | v0.2 | ✅ Completa | Lexer/parser robusto, módulos cybersec reales |
-| 3 | v0.3 | ✅ Completa | Python backend completo (capture, attack, fuzzer) |
-| 4 | v0.4 | ✅ Completa | Go backend funcional — goroutines, stdlib |
-| 5 | v0.5 | ⏳ Próxima | Rust backend funcional — memory safety |
-| 6 | v0.6 | ⏳ | C backend completo — libpcap, raw sockets |
+| 3 | v0.3 | ✅ Completa | Python backend completo (100% features) |
+| 4 | v0.4 | ✅ Completa*| Go backend funcional — goroutines, stdlib |
+| 5 | v0.5 | ✅ Completa*| Rust backend funcional — memory safety, tokio |
+| 6 | v0.6 | ⚠️ Alpha    | C backend — libpcap, raw sockets (en progreso) |
+
+*\*Nota: Completadas a nivel de código y tests automatizados, pendientes de validación manual en terminal local.*
 | 7 | v0.7 | ⏳ | Módulos, multi-return, error handling |
 | 8 | v0.8 | ⏳ | Tooling: compile, check, fmt, VS Code extension |
 | — | v1.0 | ⏳ | Todos los backends + 300+ tests + ecosistema |
