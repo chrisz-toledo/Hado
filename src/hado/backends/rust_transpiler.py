@@ -138,7 +138,7 @@ class RustTranspiler(BaseTranspiler):
         return visitor(node)
 
     def _visit_unknown(self, node: Node) -> str:
-        return f"// TODO: {type(node).__name__}"
+        raise NotImplementedError(f"Node not implemented in Rust backend: {type(node).__name__}")
 
     def _visit_program(self, node: Program) -> List[str]:
         lines = []
@@ -467,6 +467,26 @@ class RustTranspiler(BaseTranspiler):
     def _visit_FunctionCall(self, node: FunctionCall) -> str:
         args = ", ".join(self._visit(a) for a in node.args)
         return f"{node.func}({args})"
+
+    def _visit_DictLiteral(self, node: DictLiteral) -> str:
+        self._rs_imports.add("std::collections::HashMap")
+        pairs = []
+        for k, v in node.pairs:
+            pairs.append(f"map.insert({self._visit(k)}, {self._visit(v)});")
+        inserts = " ".join(pairs)
+        return f"{{ let mut map = HashMap::new(); {inserts} map }}"
+
+    def _visit_IndexAccess(self, node: IndexAccess) -> str:
+        obj = self._visit(node.obj)
+        idx = self._visit(node.index)
+        return f"{obj}[{idx} as usize]"
+
+    def _visit_PipeExpression(self, node: PipeExpression) -> str:
+        return "None /* pipe expresion basica no soportada directamente en Rust */"
+
+    def _visit_SortExpression(self, node: SortExpression) -> str:
+        src = self._visit(node.source) if node.source else "_hado_pipe_input"
+        return f"{{ let mut _tmp = {src}.clone(); _tmp.sort(); _tmp }}"
 
     def _visit_FilterExpression(self, node: FilterExpression) -> str:
         cond = self._visit(node.condition)

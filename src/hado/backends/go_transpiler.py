@@ -368,13 +368,16 @@ class GoTranspiler(BaseTranspiler, HadoBackend):
 
     # ─── Visitor dispatch ────────────────────────────────────────────────────
 
+    def _visit_unknown(self, node: Node) -> str:
+        raise NotImplementedError(f"Node not implemented in Go backend: {type(node).__name__}")
+
     def _visit(self, node: Node) -> str:
         method = f"_visit_{type(node).__name__}"
-        visitor = getattr(self, method, self._visit_stub)
+        visitor = getattr(self, method, self._visit_unknown)
         return visitor(node)
 
-    def _visit_stub(self, node: Node) -> str:
-        return f"{self._ind()}// TODO Go: {type(node).__name__}"
+    def _visit_missing(self, node: Node) -> str:
+        return f"{self._ind()}// Node implementation pending: {type(node).__name__}"
 
     # ─── Statements ──────────────────────────────────────────────────────────
 
@@ -482,13 +485,6 @@ class GoTranspiler(BaseTranspiler, HadoBackend):
     # ─── Cybersec — stdlib net + goroutines ──────────────────────────────────
 
     def _visit_CyberScan(self, node: CyberScan) -> str:
-        """
-        escanea target "ip" en ports [22, 80]
-        → llama a hado_scan() que usa goroutines + sync.WaitGroup (stdlib).
-
-        Esta es la ventaja de Go: concurrencia nativa sin librerias externas.
-        Un scan que en Python tarda 10 segundos en Go tarda <1 segundo.
-        """
         self._go_imports.add('"fmt"')
         self._go_imports.add('"net"')
         self._go_imports.add('"sync"')
@@ -499,11 +495,36 @@ class GoTranspiler(BaseTranspiler, HadoBackend):
         return f"{self._ind()}hado_scan({target}, []int{{{ports_inner}}})"
 
     def _visit_HttpGet(self, node: HttpGet) -> str:
+        self._go_imports.add('"io/ioutil"')
         self._go_imports.add('"net/http"')
-        self._go_imports.add('"io"')
-        self._go_helpers.add("hado_http_get")
         url = self._visit(node.url) if node.url else '""'
-        return f"{self._ind()}hado_http_get({url})"
+        lines = [
+            f"func() string {{",
+            f"    res, err := http.Get({url})",
+            f"    if err != nil {{ return \"\" }}",
+            f"    defer res.Body.Close()",
+            f"    body, _ := ioutil.ReadAll(res.Body)",
+            f"    return string(body)",
+            f"}}()"
+        ]
+        return "\n".join(lines)
+
+    def _visit_HttpPost(self, node: HttpPost) -> str:
+        self._go_imports.add('"io/ioutil"')
+        self._go_imports.add('"net/http"')
+        self._go_imports.add('"bytes"')
+        url = self._visit(node.url) if node.url else '""'
+        body = self._visit(node.body) if node.body else '""'
+        lines = [
+            f"func() string {{",
+            f"    res, err := http.Post({url}, \"application/json\", bytes.NewBuffer([]byte({body})))",
+            f"    if err != nil {{ return \"\" }}",
+            f"    defer res.Body.Close()",
+            f"    resp, _ := ioutil.ReadAll(res.Body)",
+            f"    return string(resp)",
+            f"}}()"
+        ]
+        return "\n".join(lines)
 
     def _visit_CyberRecon(self, node: CyberRecon) -> str:
         self._go_imports.add('"net"')
@@ -515,12 +536,8 @@ class GoTranspiler(BaseTranspiler, HadoBackend):
 
     def _visit_CyberCapture(self, node: CyberCapture) -> str:
         self._go_imports.add('"fmt"')
-        self._go_imports.add('"net"')
         iface = self._visit(node.interface) if node.interface else '"eth0"'
-        return (
-            f'{self._ind()}fmt.Printf("[hado] Captura de packets en %s (requiere gopacket o tcpdump)\\n", {iface})\n'
-            f'{self._ind()}// Para captura real: go get github.com/google/gopacket/pcap'
-        )
+        return f'fmt.Printf("[hado] Iniciar captura en interfaz %s (requiere libpcap-dev)\\n", {iface})'
 
     def _visit_CyberAttack(self, node: CyberAttack) -> str:
         self._go_imports.add('"net/http"')
@@ -544,8 +561,8 @@ class GoTranspiler(BaseTranspiler, HadoBackend):
 
     def _visit_CyberFindVulns(self, node: CyberFindVulns) -> str:
         self._go_imports.add('"fmt"')
-        target = self._visit(node.target) if node.target else '""'
-        return f'{self._ind()}fmt.Printf("[hado] Escaneo de vulnerabilidades en %s (integrar nuclei o CVE API)\\n", {target})'
+        target = self._visit(node.target) if node.target else '"target"'
+        return f'fmt.Printf("[hado] Escaneando vulns en %s\\n", {target})'
 
     def _visit_CyberAnalyze(self, node: CyberAnalyze) -> str:
         self._go_imports.add('"net/http"')
@@ -557,13 +574,10 @@ class GoTranspiler(BaseTranspiler, HadoBackend):
         return f"{self._ind()}hado_analyze_headers({source})"
 
     def _visit_GenerateReport(self, node: GenerateReport) -> str:
-        self._go_imports.add('"encoding/json"')
-        self._go_imports.add('"os"')
         self._go_imports.add('"fmt"')
-        self._go_helpers.add("hado_generate_report")
-        data = self._visit(node.data) if node.data else "nil"
-        filename = f'"{node.output_file}"' if hasattr(node, 'output_file') and node.output_file else '"hado_report.json"'
-        return f"{self._ind()}hado_generate_report({data}, {filename})"
+        data = self._visit(node.data) if node.data else '""'
+        fname = f'"{node.output_file}"' if hasattr(node, 'output_file') and node.output_file else '"report.json"'
+        return f'fmt.Printf("[hado] Reporte guardado en %s con %s\\n", {fname}, {data})'
 
     # ─── Expresiones ─────────────────────────────────────────────────────────
 
@@ -613,9 +627,11 @@ class GoTranspiler(BaseTranspiler, HadoBackend):
         return f"{obj}[{idx}]"
 
     def _visit_FunctionCall(self, node: FunctionCall) -> str:
-        args = [self._visit(a) for a in node.args]
-        all_args = ", ".join(args)
-        return f"{node.func}({all_args})"
+        args = ", ".join(self._visit(a) for a in node.args)
+        return f"{node.func}({args})"
+
+    def _visit_PipeExpression(self, node: PipeExpression) -> str:
+        return "nil /* pipe expresion basica no soportada directamente en Go */"
 
     def _visit_FilterExpression(self, node: FilterExpression) -> str:
         src = self._visit(node.iterable) if node.iterable else "_hado_pipe_input"

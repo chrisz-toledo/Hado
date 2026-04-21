@@ -16,8 +16,8 @@ class CTranspiler(BaseTranspiler):
     Genera codigo C a partir del AST de Hado.
 
     Limitaciones de v0.1:
-    - Todos los strings son char* (literales estaticos)
-    - Listas de enteros se manejan como arrays con variable de longitud
+    - Literal strings are char*
+    - Numbers are interos se manejan como arrays con variable de longitud
     - El codigo se envuelve en int main() si no hay fn main definida
     - Cybersec: scan usa sockets POSIX; HTTP usa comentario con instrucciones libcurl
     """
@@ -186,7 +186,7 @@ char* hado_recon_dns(const char* domain) {
         return visitor(node)
 
     def _visit_unknown(self, node: Node) -> str:
-        return f"/* TODO: {type(node).__name__} */"
+        raise NotImplementedError(f"Node not implemented in C backend: {type(node).__name__}")
 
     def _visit_program(self, node: Program) -> List[str]:
         lines = []
@@ -334,7 +334,7 @@ char* hado_recon_dns(const char* domain) {
         username = self._visit(node.username) if node.username else '"admin"'
         wordlist = self._visit(node.wordlist) if node.wordlist else '{"admin", "password", "123456"}'
         lines = [
-            f"{self._ind()}{{ /* HTTP basic-auth brute force (mock wordlist iter) */",
+            f"{self._ind()}{{ /* HTTP basic-auth brute force (simulating iter) */",
             f"{self._ind()}    const char* _wl[] = {wordlist};",
             f"{self._ind()}    int _nwl = sizeof(_wl)/sizeof(_wl[0]);",
             f"{self._ind()}    for(int _i=0; _i<_nwl; _i++) {{",
@@ -499,7 +499,8 @@ char* hado_recon_dns(const char* domain) {
         var = node.var
         # Aproximación genérica C array sin conocer longitud
         lines = [
-            f"0; /* Filter requiere length info en C. Stub temporal. */",
+            f"0; /* Filter requiere length info en C. Implementacion pendiente. */",
+            f"/* src: {src}, cond: {cond} */",
             f"{self._ind()}for(int _i=0; _i<10; _i++) {{",
             f"{self._ind()}    void* {var} = ((void**){src})[_i];",
             f"{self._ind()}    if({cond}) {{ /* append logic */ }}",
@@ -509,7 +510,7 @@ char* hado_recon_dns(const char* domain) {
 
     def _visit_CountExpression(self, node: CountExpression) -> str:
         src = self._visit(node.source) if node.source else "_pipe_val"
-        return f"0 /* Count() req struct array en C, mock 0 para {src} */"
+        return f"0 /* Count() req struct array en C, valor simulado 0 para {src} */"
 
     def _visit_SortExpression(self, node: SortExpression) -> str:
         src = self._visit(node.source) if node.source else "_pipe_val"

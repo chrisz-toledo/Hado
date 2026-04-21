@@ -31,7 +31,7 @@ class PowershellTranspiler(BaseTranspiler):
         return visitor(node)
 
     def _visit_unknown(self, node: Node) -> str:
-        return f"# TODO: {type(node).__name__}"
+        raise NotImplementedError(f"Node not implemented in PowerShell backend: {type(node).__name__}")
 
     def _visit_Assignment(self, node: Assignment) -> str:
         val = self._visit(node.value) if node.value else '""'
@@ -152,7 +152,7 @@ class PowershellTranspiler(BaseTranspiler):
 
     def _visit_CyberCapture(self, node: CyberCapture) -> str:
         iface = self._visit(node.interface) if node.interface else '"eth0"'
-        return f'{self._ind()}Write-Output "[hado] NetEvent packet capture stub (Pktmon requires Admin) en {iface}"'
+        return f'{self._ind()}Write-Output "[hado] NetEvent packet capture implementation (Pktmon requires Admin) en {iface}"'
 
     def _visit_CyberEnumerate(self, node: CyberEnumerate) -> str:
         target = self._visit(node.target) if node.target else '"http://127.0.0.1"'

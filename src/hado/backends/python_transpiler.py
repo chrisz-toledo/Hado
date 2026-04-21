@@ -140,7 +140,7 @@ class PythonTranspiler(BaseTranspiler):
         return visitor(node)
 
     def _visit_unknown(self, node: Node) -> str:
-        return f"# TODO: {type(node).__name__}"
+        raise NotImplementedError(f"Node not implemented in Python backend: {type(node).__name__}")
 
     def _visit_program(self, node: Program) -> List[str]:
         lines = []
@@ -307,8 +307,26 @@ class PythonTranspiler(BaseTranspiler):
     def _visit_HttpPost(self, node: HttpPost) -> str:
         self.imports.need("requests")
         url = self._visit(node.url) if node.url else '""'
-        body = self._visit(node.body) if node.body else '{{}}'
+        body = self._visit(node.body) if node.body else '{}'
         return f"requests.post({url}, json={body}).json()"
+
+    def _visit_PipeExpression(self, node: PipeExpression) -> str:
+        # En Python, el pipeline se simula asignando el resultado a _pipe_val repetidamente
+        # Dado que emit_pipe_chain ya maneja el statement top-level, aquí manejamos
+        # el caso en que un pipe se usa como expresión.
+        # Por simplicidad en expresiones (que no son statements), no soportamos un pipe completo
+        # a menos que sea a través de un runtime.
+        # Fallback: solo retornar el primer paso (idealmente esto debería usar emit_pipe_chain pero como lambda).
+        # Vamos a devolver una función local autoejecutada para simular el scope.
+        lines = ["(lambda: ("]
+        for i, step in enumerate(node.steps):
+            if i == 0:
+                lines.append(f"  _hado_pipe_input := {self._visit(step)},")
+            else:
+                lines.append(f"  _hado_pipe_input := {self._visit(step)},")
+        lines.append("  _hado_pipe_input")
+        lines.append(")[-1])()")
+        return "\n".join(lines)
 
     # ─── Expresiones de datos ─────────────────────────────────────────────────
 

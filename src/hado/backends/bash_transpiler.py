@@ -27,7 +27,7 @@ class BashTranspiler(BaseTranspiler):
         return visitor(node)
 
     def _visit_unknown(self, node: Node) -> str:
-        return f"# TODO: {type(node).__name__}"
+        raise NotImplementedError(f"Node not implemented in Bash backend: {type(node).__name__}")
 
     def _visit_Assignment(self, node: Assignment) -> str:
         val = self._visit(node.value) if node.value else '""'

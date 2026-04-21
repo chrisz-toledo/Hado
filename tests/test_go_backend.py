@@ -308,14 +308,13 @@ class TestGoCybersec:
 class TestGoHTTP:
 
     def test_desde_uses_helper(self):
-        """desde 'url' → hado_http_get(url)"""
-        code = go('datos = desde "https://api.example.com"\n')
-        assert "hado_http_get(" in code
+        code = go('datos = desde "http://api"\\n')
+        assert "func() string {" in code
+        assert "http.Get(" in code
 
     def test_desde_emits_http_helper(self):
-        """Se emite la funcion hado_http_get."""
-        code = go('datos = desde "https://api.example.com"\n')
-        assert "func hado_http_get(" in code
+        code = go('datos = desde "http://api"\\n')
+        assert "ioutil.ReadAll" in code
 
     def test_desde_imports_net_http(self):
         code = go('datos = desde "https://api.example.com"\n')
