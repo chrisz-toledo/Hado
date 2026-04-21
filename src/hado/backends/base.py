@@ -140,6 +140,15 @@ _BACKEND_REGISTRY: dict[str, dict] = {
         "extension": ".sol",
         "compile_cmd": None,
     },
+    "arduino": {
+        "version": "1.0",
+        "status": "funcional",
+        "description": "Hardware, IoT, ESP32, BadUSB payloads",
+        "module": "hado.backends.arduino_transpiler",
+        "class": "ArduinoTranspiler",
+        "extension": ".ino",
+        "compile_cmd": None,
+    },
 }
 
 
