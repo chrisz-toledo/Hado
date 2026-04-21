@@ -212,11 +212,13 @@ class TestLexerTolerance:
 
 def _run_hado(*args) -> subprocess.CompletedProcess:
     """Ejecuta `hado` como subprocess y retorna el resultado."""
+    # Resolver la raiz del proyecto dinamicamente (donde vive pyproject.toml)
+    _project_root = str(Path(__file__).resolve().parent.parent)
     return subprocess.run(
         [sys.executable, "-m", "hado", *args],
         capture_output=True,
         text=True,
-        cwd="/sessions/confident-quirky-hawking/mnt/habla",
+        cwd=_project_root,
     )
 
 

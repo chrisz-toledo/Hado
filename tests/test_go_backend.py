@@ -415,7 +415,7 @@ muestra edad
     @pytest.mark.skipif(not has_go(), reason="go no esta instalado en el sistema")
     def test_if_statement_compiles(self):
         """Condicional if/else compila."""
-        source = "x := 5\nsi x > 0\n  muestra x\nsino\n  muestra 0\n"
+        source = "x = 5\nsi x > 0\n  muestra x\nsino\n  muestra 0\n"
         code = go(source)
         assert go_builds(code), f"El codigo Go no compilo:\n{code}"
 
