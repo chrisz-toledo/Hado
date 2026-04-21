@@ -309,11 +309,117 @@ class RustTranspiler(BaseTranspiler):
             f"{self._ind()}let _body = _response.text().await?;"
         )
 
+    def _visit_HttpPost(self, node) -> str:
+        self._has_async = True
+        self._cargo_deps.update({"tokio", "reqwest", "anyhow"})
+        url = self._visit(node.url) if node.url else '""'
+        body = self._visit(node.body) if node.body else '""'
+        return (
+            f"{self._ind()}let _client = reqwest::Client::new();\n"
+            f"{self._ind()}let _response = _client.post({url}).body({body}).send().await?;\n"
+            f"{self._ind()}let _body = _response.text().await?;"
+        )
+
+    # ─── Cyber — Attack (brute force async) ───────────────────────────────────
+
+    def _visit_CyberAttack(self, node) -> str:
+        self._has_async = True
+        self._cargo_deps.update({"tokio", "reqwest", "anyhow"})
+
+        target = self._visit(node.target) if node.target else '"http://127.0.0.1"'
+        username = self._visit(node.username) if node.username else '"admin"'
+        wordlist = self._visit(node.wordlist) if node.wordlist else 'vec!["admin".to_string(), "password".to_string(), "123456".to_string()]'
+
+        # Registrar helper una sola vez
+        if not getattr(self, "_brute_registered", False):
+            self._brute_registered = True
+            self._top_level.append(_BRUTE_FORCE_FN)
+
+        lines = [
+            f"{self._ind()}// ataca {target} (HTTP basic-auth brute force)",
+            f"{self._ind()}let _wordlist: Vec<String> = {wordlist}.iter().map(|s| s.to_string()).collect();",
+            f"{self._ind()}let _attack_result = hado_brute_http({target}, {username}, &_wordlist).await;",
+            f'{self._ind()}println!("Ataque resultado: {{:?}}", _attack_result);',
+        ]
+        return "\n".join(lines)
+
+    # ─── Cyber — Analyze (HTTP header security) ───────────────────────────────
+
+    def _visit_CyberAnalyze(self, node) -> str:
+        self._has_async = True
+        self._cargo_deps.update({"tokio", "reqwest", "anyhow"})
+
+        source = self._visit(node.source) if node.source else '"http://127.0.0.1"'
+
+        if not getattr(self, "_analyze_registered", False):
+            self._analyze_registered = True
+            self._top_level.append(_ANALYZE_HEADERS_FN)
+
+        lines = [
+            f"{self._ind()}// analiza headers de seguridad en {source}",
+            f"{self._ind()}let _header_report = hado_analyze_headers({source}).await;",
+            f'{self._ind()}println!("Header analysis: {{:#?}}", _header_report);',
+        ]
+        return "\n".join(lines)
+
+    # ─── Cyber — Capture (raw sockets / pcap advice) ──────────────────────────
+
+    def _visit_CyberCapture(self, node) -> str:
+        self._has_async = True
+        self._cargo_deps.update({"tokio", "anyhow"})
+
+        iface = self._visit(node.interface) if node.interface else '"eth0"'
+        lines = [
+            f"{self._ind()}// captura packets en {iface}",
+            f"{self._ind()}// Para captura raw: añadir pnet = \"0.35\" al Cargo.toml",
+            f'{self._ind()}println!("[hado] Iniciando captura en interfaz {{}}", {iface});',
+            f'{self._ind()}println!("[hado] Captura finalizada (integrar pnet para raw sockets avanzados)");',
+        ]
+        return "\n".join(lines)
+
+    # ─── Cyber — Enumerate (dir fuzzing async) ────────────────────────────────
+
+    def _visit_CyberEnumerate(self, node) -> str:
+        self._has_async = True
+        self._cargo_deps.update({"tokio", "reqwest", "futures", "anyhow"})
+
+        target = self._visit(node.target) if node.target else '"http://127.0.0.1"'
+        wordlist = self._visit(node.wordlist) if node.wordlist else 'vec!["admin", "login", "api", "backup", "config", "test"]'
+
+        if not getattr(self, "_enumerate_registered", False):
+            self._enumerate_registered = True
+            self._top_level.append(_ENUMERATE_FN)
+
+        lines = [
+            f"{self._ind()}// enumera directorios en {target}",
+            f"{self._ind()}let _wordlist: Vec<&str> = {wordlist};",
+            f"{self._ind()}let _found = hado_enumerate({target}, &_wordlist).await;",
+            f'{self._ind()}println!("Directorios encontrados: {{:?}}", _found);',
+        ]
+        return "\n".join(lines)
+
+    # ─── Cyber — FindVulns ────────────────────────────────────────────────────
+
+    def _visit_CyberFindVulns(self, node) -> str:
+        self._has_async = True
+        self._cargo_deps.update({"tokio", "anyhow"})
+        target = self._visit(node.target) if node.target else '"target"'
+        return (
+            f'{self._ind()}println!("[hado] Escaneo de vulnerabilidades en {{}} (integrar CVE API)", {target});'
+        )
+
     # ─── Cyber — Report ───────────────────────────────────────────────────────
 
     def _visit_GenerateReport(self, node: GenerateReport) -> str:
         data = self._visit(node.data) if node.data else "_data"
-        return f'{self._ind()}println!("=== Reporte Hado ===\\n{{:#?}}", {data});'
+        fname = f'"{node.output_file}"' if hasattr(node, 'output_file') and node.output_file else '"hado_report.json"'
+        self._cargo_deps.update({"serde_json", "anyhow"})
+        lines = [
+            f'{self._ind()}let _report_json = serde_json::to_string_pretty(&format!("{{:?}}", {data}))?;',
+            f"{self._ind()}std::fs::write({fname}, &_report_json)?;",
+            f'{self._ind()}println!("[hado] Reporte guardado → {{}}", {fname});',
+        ]
+        return "\n".join(lines)
 
     # ─── Expresiones ─────────────────────────────────────────────────────────
 
@@ -490,3 +596,94 @@ async fn find_subdomains(domain: &str) -> Vec<String> {
         .flatten()
         .collect()
 }'''
+
+_BRUTE_FORCE_FN = '''\
+/// Fuerza bruta HTTP basic-auth de forma asíncrona con reqwest.
+async fn hado_brute_http(target: &str, username: &str, wordlist: &[String]) -> Vec<String> {
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .unwrap_or_default();
+    let mut found = Vec::new();
+    for password in wordlist {
+        let resp = client
+            .get(target)
+            .basic_auth(username, Some(password))
+            .send()
+            .await;
+        if let Ok(r) = resp {
+            if r.status().as_u16() == 200 {
+                let cred = format!("{}:{}", username, password);
+                println!("[hado] Credencial encontrada: {}", cred);
+                found.push(cred);
+                break;
+            }
+        }
+    }
+    found
+}'''
+
+_ANALYZE_HEADERS_FN = '''\
+/// Verifica los 9 headers de seguridad HTTP con reqwest async.
+/// Retorna Vec<(String, String)> con header → valor o "MISSING".
+async fn hado_analyze_headers(target: &str) -> Vec<(String, String)> {
+    let security_headers = [
+        "Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options",
+        "X-Content-Type-Options",   "Referrer-Policy",          "Permissions-Policy",
+        "X-XSS-Protection",         "Cache-Control",            "Cross-Origin-Embedder-Policy",
+    ];
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(5))
+        .build()
+        .unwrap_or_default();
+    let mut result: Vec<(String, String)> = Vec::new();
+    match client.get(target).send().await {
+        Err(e) => { result.push(("error".to_string(), e.to_string())); }
+        Ok(resp) => {
+            let headers = resp.headers().clone();
+            let mut found = 0usize;
+            for h in &security_headers {
+                let val = headers.get(*h)
+                    .and_then(|v| v.to_str().ok())
+                    .unwrap_or("MISSING");
+                if val != "MISSING" { found += 1; }
+                result.push((h.to_string(), val.to_string()));
+            }
+            let grade = match found { 8..=9 => "A", 6..=7 => "B", 4..=5 => "C", 2..=3 => "D", _ => "F" };
+            println!("[hado] Header analysis {} → Grade: {} ({}/9 headers)", target, grade, found);
+            result.push(("grade".to_string(), grade.to_string()));
+        }
+    }
+    result
+}'''
+
+_ENUMERATE_FN = '''\
+/// Fuzzing de directorios web de forma concurrente con reqwest + futures::join_all.
+async fn hado_enumerate(target: &str, wordlist: &[&str]) -> Vec<String> {
+    use futures::future::join_all;
+    let client = reqwest::Client::builder()
+        .timeout(std::time::Duration::from_secs(3))
+        .build()
+        .unwrap_or_default();
+    let tasks: Vec<_> = wordlist
+        .iter()
+        .map(|word| {
+            let url = format!("{}/{}", target, word);
+            let c = client.clone();
+            async move {
+                match c.get(&url).send().await {
+                    Ok(r) => {
+                        let code = r.status().as_u16();
+                        if matches!(code, 200 | 301 | 302 | 403) {
+                            println!("[hado] Encontrado: {} [{}]", url, code);
+                            Some(format!("{} [{}]", url, code))
+                        } else { None }
+                    }
+                    Err(_) => None,
+                }
+            }
+        })
+        .collect();
+    join_all(tasks).await.into_iter().flatten().collect()
+}'''
+

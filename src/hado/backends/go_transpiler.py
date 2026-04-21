@@ -30,7 +30,7 @@ from ..ast_nodes import (
     NullLiteral, ListLiteral, DictLiteral, Identifier, BinaryOp, UnaryOp,
     PipeExpression, PropertyAccess, IndexAccess, FunctionCall,
     CyberScan, CyberRecon, CyberCapture, CyberAttack, CyberFindVulns,
-    CyberAnalyze, GenerateReport, HttpGet, FilterExpression,
+    CyberAnalyze, CyberEnumerate, GenerateReport, HttpGet, FilterExpression,
     SortExpression, CountExpression,
 )
 from .base import HadoBackend
@@ -96,6 +96,122 @@ func hado_http_get(url string) string {
 \tdefer resp.Body.Close()
 \tbody, _ := io.ReadAll(resp.Body)
 \treturn string(body)
+}
+"""
+
+_HELPER_ANALYZE_HEADERS = """
+// hado_analyze_headers — verifica los 9 headers de seguridad HTTP (stdlib net/http).
+func hado_analyze_headers(target string) map[string]string {
+\tsecurityHeaders := []string{
+\t\t"Strict-Transport-Security", "Content-Security-Policy", "X-Frame-Options",
+\t\t"X-Content-Type-Options", "Referrer-Policy", "Permissions-Policy",
+\t\t"X-XSS-Protection", "Cache-Control", "Cross-Origin-Embedder-Policy",
+\t}
+\tresult := make(map[string]string)
+\tclient := &http.Client{Timeout: 5 * time.Second}
+\tresp, err := client.Get(target)
+\tif err != nil { result["error"] = err.Error(); return result }
+\tdefer resp.Body.Close()
+\tfound := 0
+\tfor _, h := range securityHeaders {
+\t\tval := resp.Header.Get(h)
+\t\tif val != "" { result[h] = val; found++ } else { result[h] = "MISSING" }
+\t}
+\tgrade := "F"
+\tif found >= 8 { grade = "A" } else if found >= 6 { grade = "B" } else if found >= 4 { grade = "C" } else if found >= 2 { grade = "D" }
+\tresult["grade"] = grade
+\tfmt.Printf("[hado] Header analysis %s → Grade: %s (%d/9 headers)\\n", target, grade, found)
+\treturn result
+}
+"""
+
+_HELPER_RECON = """
+// hado_find_subdomains — enumera subdominios via DNS lookup concurrente (stdlib net).
+func hado_find_subdomains(domain string) []string {
+\tprefixes := []string{"www", "mail", "api", "dev", "admin", "test",
+\t\t"staging", "vpn", "ftp", "git", "m", "app", "cdn", "ns1", "ns2"}
+\tvar mu sync.Mutex
+\tvar wg sync.WaitGroup
+\tvar found []string
+\tfor _, p := range prefixes {
+\t\twg.Add(1)
+\t\tgo func(prefix string) {
+\t\t\tdefer wg.Done()
+\t\t\tfqdn := fmt.Sprintf("%s.%s", prefix, domain)
+\t\t\t_, err := net.LookupHost(fqdn)
+\t\t\tif err == nil {
+\t\t\t\tmu.Lock()
+\t\t\t\tfound = append(found, fqdn)
+\t\t\t\tmu.Unlock()
+\t\t\t}
+\t\t}(p)
+\t}
+\twg.Wait()
+\treturn found
+}
+"""
+
+_HELPER_BRUTE = """
+// hado_brute_http — HTTP basic-auth brute force con goroutines (stdlib net/http).
+func hado_brute_http(target, username string, wordlist []string) map[string]interface{} {
+\tresult := map[string]interface{}{"found": false, "service": "http", "target": target, "attempts": 0}
+\tfor i, password := range wordlist {
+\t\tclient := &http.Client{Timeout: 3 * time.Second}
+\t\treq, _ := http.NewRequest("GET", target, nil)
+\t\treq.SetBasicAuth(username, password)
+\t\tresp, err := client.Do(req)
+\t\tresult["attempts"] = i + 1
+\t\tif err == nil && resp.StatusCode == 200 {
+\t\t\tresp.Body.Close()
+\t\t\tresult["found"] = true
+\t\t\tresult["password"] = password
+\t\t\tfmt.Printf("[hado] Credencial encontrada: %s:%s\\n", username, password)
+\t\t\tbreak
+\t\t}
+\t\tif err == nil { resp.Body.Close() }
+\t}
+\treturn result
+}
+"""
+
+_HELPER_ENUMERATE = """
+// hado_enumerate — fuzzing de directorios web con goroutines (stdlib net/http).
+func hado_enumerate(target string, wordlist []string) []string {
+\tvar mu sync.Mutex
+\tvar wg sync.WaitGroup
+\tvar found []string
+\tfor _, word := range wordlist {
+\t\twg.Add(1)
+\t\tgo func(w string) {
+\t\t\tdefer wg.Done()
+\t\t\tclient := &http.Client{Timeout: 3 * time.Second}
+\t\t\turl := fmt.Sprintf("%s/%s", target, w)
+\t\t\tresp, err := client.Get(url)
+\t\t\tif err == nil {
+\t\t\t\tdefer resp.Body.Close()
+\t\t\t\tif resp.StatusCode == 200 || resp.StatusCode == 301 || resp.StatusCode == 302 || resp.StatusCode == 403 {
+\t\t\t\t\tmu.Lock()
+\t\t\t\t\tfound = append(found, fmt.Sprintf("%s [%d]", url, resp.StatusCode))
+\t\t\t\t\tmu.Unlock()
+\t\t\t\t\tfmt.Printf("[hado] Encontrado: %s [%d]\\n", url, resp.StatusCode)
+\t\t\t\t}
+\t\t\t}
+\t\t}(word)
+\t}
+\twg.Wait()
+\treturn found
+}
+"""
+
+_HELPER_GENERATE_REPORT = """
+// hado_generate_report — serializa datos a JSON y guarda a disco (stdlib encoding/json).
+func hado_generate_report(data interface{}, filename string) {
+\tif filename == "" { filename = "hado_report.json" }
+\tb, err := json.MarshalIndent(data, "", "  ")
+\tif err != nil { fmt.Printf("[hado] Error serializando reporte: %v\\n", err); return }
+\terr = os.WriteFile(filename, b, 0644)
+\tif err != nil { fmt.Printf("[hado] Error guardando reporte: %v\\n", err); return }
+\tfmt.Printf("[hado] Reporte guardado → %s\\n", filename)
 }
 """
 
@@ -179,11 +295,19 @@ class GoTranspiler(BaseTranspiler, HadoBackend):
         # Construir bloques del archivo Go
         imports_block = self._build_imports()
 
+        _helper_map = {
+            "hado_scan": _HELPER_SCAN,
+            "hado_http_get": _HELPER_HTTP_GET,
+            "hado_analyze_headers": _HELPER_ANALYZE_HEADERS,
+            "hado_find_subdomains": _HELPER_RECON,
+            "hado_brute_http": _HELPER_BRUTE,
+            "hado_enumerate": _HELPER_ENUMERATE,
+            "hado_generate_report": _HELPER_GENERATE_REPORT,
+        }
         helpers_block_parts: List[str] = []
-        if "hado_scan" in self._go_helpers:
-            helpers_block_parts.append(_HELPER_SCAN.strip())
-        if "hado_http_get" in self._go_helpers:
-            helpers_block_parts.append(_HELPER_HTTP_GET.strip())
+        for helper_name, helper_src in _helper_map.items():
+            if helper_name in self._go_helpers:
+                helpers_block_parts.append(helper_src.strip())
         helpers_block = "\n\n".join(helpers_block_parts)
 
         func_code = "\n\n".join(func_code_lines)
@@ -382,37 +506,64 @@ class GoTranspiler(BaseTranspiler, HadoBackend):
         return f"{self._ind()}hado_http_get({url})"
 
     def _visit_CyberRecon(self, node: CyberRecon) -> str:
+        self._go_imports.add('"net"')
+        self._go_imports.add('"fmt"')
+        self._go_imports.add('"sync"')
+        self._go_helpers.add("hado_find_subdomains")
         domain = self._visit(node.domain) if node.domain else '""'
-        return (
-            f"{self._ind()}// buscar subdominios de {domain}\n"
-            f"{self._ind()}// (requiere herramientas externas: subfinder, amass)"
-        )
+        return f"{self._ind()}hado_find_subdomains({domain})"
 
     def _visit_CyberCapture(self, node: CyberCapture) -> str:
+        self._go_imports.add('"fmt"')
+        self._go_imports.add('"net"')
         iface = self._visit(node.interface) if node.interface else '"eth0"'
         return (
-            f"{self._ind()}// capturar packets en {iface}\n"
-            f"{self._ind()}// (requiere gopacket: github.com/google/gopacket)"
+            f'{self._ind()}fmt.Printf("[hado] Captura de packets en %s (requiere gopacket o tcpdump)\\n", {iface})\n'
+            f'{self._ind()}// Para captura real: go get github.com/google/gopacket/pcap'
         )
 
     def _visit_CyberAttack(self, node: CyberAttack) -> str:
-        return (
-            f"{self._ind()}// ataque de fuerza bruta\n"
-            f"{self._ind()}// (implementar con goroutines + golang.org/x/crypto/ssh)"
-        )
+        self._go_imports.add('"net/http"')
+        self._go_imports.add('"fmt"')
+        self._go_imports.add('"time"')
+        self._go_helpers.add("hado_brute_http")
+        target = self._visit(node.target) if node.target else '"http://127.0.0.1"'
+        username = self._visit(node.username) if node.username else '"admin"'
+        wordlist = self._visit(node.wordlist) if node.wordlist else '[]string{"admin", "password", "123456"}'
+        return f"{self._ind()}hado_brute_http({target}, {username}, {wordlist})"
+
+    def _visit_CyberEnumerate(self, node: CyberEnumerate) -> str:
+        self._go_imports.add('"net/http"')
+        self._go_imports.add('"fmt"')
+        self._go_imports.add('"sync"')
+        self._go_imports.add('"time"')
+        self._go_helpers.add("hado_enumerate")
+        target = self._visit(node.target) if node.target else '"http://127.0.0.1"'
+        wordlist = self._visit(node.wordlist) if node.wordlist else '[]string{"admin", "login", "api", "backup", "config", "test"}'
+        return f"{self._ind()}hado_enumerate({target}, {wordlist})"
 
     def _visit_CyberFindVulns(self, node: CyberFindVulns) -> str:
-        return f"{self._ind()}// buscar vulnerabilidades (requiere nuclei externo)"
+        self._go_imports.add('"fmt"')
+        target = self._visit(node.target) if node.target else '""'
+        return f'{self._ind()}fmt.Printf("[hado] Escaneo de vulnerabilidades en %s (integrar nuclei o CVE API)\\n", {target})'
 
     def _visit_CyberAnalyze(self, node: CyberAnalyze) -> str:
-        return f"{self._ind()}// analizar seguridad"
+        self._go_imports.add('"net/http"')
+        self._go_imports.add('"fmt"')
+        self._go_imports.add('"sync"')
+        self._go_imports.add('"time"')
+        self._go_helpers.add("hado_analyze_headers")
+        source = self._visit(node.source) if node.source else '"http://127.0.0.1"'
+        return f"{self._ind()}hado_analyze_headers({source})"
 
     def _visit_GenerateReport(self, node: GenerateReport) -> str:
+        self._go_imports.add('"encoding/json"')
+        self._go_imports.add('"os"')
+        self._go_imports.add('"fmt"')
+        self._go_helpers.add("hado_generate_report")
         data = self._visit(node.data) if node.data else "nil"
-        return (
-            f"{self._ind()}// generar reporte con {data}\n"
-            f"{self._ind()}// (usar html/template o encoding/json de la stdlib)"
-        )
+        filename = f'"{node.output_file}"' if hasattr(node, 'output_file') and node.output_file else '"hado_report.json"'
+        return f"{self._ind()}hado_generate_report({data}, {filename})"
 
     # ─── Expresiones ─────────────────────────────────────────────────────────
 
