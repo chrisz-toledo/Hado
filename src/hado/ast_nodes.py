@@ -11,6 +11,7 @@ from typing import Any, List, Optional
 @dataclass
 class Node:
     line: int = 0
+    meta: Dict[str, Any] = field(default_factory=dict, repr=False, compare=False)
 
 
 # ─── Programa ────────────────────────────────────────────────────────────────
