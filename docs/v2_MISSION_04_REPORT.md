@@ -17,11 +17,10 @@ La suite de pruebas confirma que:
 - Los strings de C contienen efectivamente los `free()` en los puntos de salida de bloque.
 - Los strings de Rust implementan correctamente el patrón de bloqueo para variables compartidas.
 
-### Estado Final del Sistema V2.0
-Hemos completado el pipeline completo de un compilador semántico moderno:
-1.  **Entrada**: AST JSON (M2M).
-2.  **Pasada 1**: Inferencia de Tipos y Scopes.
-3.  **Pasada 2**: Análisis de Ciclo de Vida y Concurrencia.
-4.  **Pasada 3**: Emisión de Payload Nativo (C/Rust).
+## 4. Mitigación de Puntos Ciegos (Technical Maturity)
+Tras un análisis de estrés, se detectaron y corrigieron dos riesgos críticos:
+- **Prevención de OOM en C**: Se actualizaron los visitantes de `WhileStatement` y `ForStatement`. El transpilador ahora inyecta `free()` al final de **cada iteración** del bucle, evitando que variables temporales saturen la memoria en ataques de fuerza bruta o fuzzing prolongado.
+- **Sincronización Asíncrona en Rust**: Se abandonó el `.await` secuencial por un modelo de **colección de handles**. El motor emite un vector `_handles` que captura cada `tokio::spawn`, y el programa principal espera obligatoriamente a todos los hilos al finalizar, garantizando que los escaneos de red no se aborten prematuramente.
 
-Hado v2.0 ha dejado de ser un wrapper de scripts para convertirse en un motor de generación de herramientas de seguridad polimórficas y seguras.
+Hado v2.0 es ahora una infraestructura de ingeniería real, lista para la orquestación autónoma masiva.
+
